@@ -56,3 +56,17 @@ previewsEnabled: true  # Enable preview deployments for pull requests
 
 # Health check endpoint
 healthCheckPath: /api/health  # Backend health check endpoint
+
+  # Frontend Static Site
+  # Serves the React application built with Vite
+  - type: web
+    name: frantendassociation # Match the name on Render dashboard
+    runtime: static
+    rootDir: frontend-separe
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    # Rewrite rule for single-page applications
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
