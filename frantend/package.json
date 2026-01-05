@@ -8,7 +8,6 @@
     "url": "https://codedthemes.com/"
   },
   "scripts": {
-    "preinstall": "corepack enable",
     "start": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -83,6 +82,5 @@
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.0.0",
     "prettier": "3.6.2"
-  },
-  "packageManager": "yarn@4.10.3"
+  }
 }
