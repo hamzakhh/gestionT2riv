@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { API_BASE_URL } from 'config';
 
-const API_URL = `${API_BASE_URL}/patients`;
+const API_URL = `${API_BASE_URL}/api/patients`;
 
 // Get all patients with pagination
 const getPatients = async (page = 1, limit = 10, search = '') => {
