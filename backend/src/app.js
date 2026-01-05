@@ -48,7 +48,9 @@ const corsOptions = {
       'http://127.0.0.1:5173',
       'http://localhost:3001/',
       'http://localhost:3001/*',
-      'http://127.0.0.1:3001/'
+      'http://127.0.0.1:3001/',
+      'https://gestiont2riv-1.onrender.com',
+      'https://gestiont2riv.onrender.com'
     ];
 
     // Autoriser les requêtes sans origine (comme les requêtes Postman) ou si l'origine est dans la liste des autorisées
