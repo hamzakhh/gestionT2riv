@@ -8,6 +8,7 @@
     "url": "https://codedthemes.com/"
   },
   "scripts": {
+    "preinstall": "corepack enable",
     "start": "vite",
     "build": "vite build",
     "preview": "vite preview",
