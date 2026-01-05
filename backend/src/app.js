@@ -126,6 +126,10 @@ app.get('/', (req, res) => {
       donors: '/api/donors',
       donations: '/api/donations',
       zakat: '/api/zakat',
+      patients: '/api/patients',
+      users: '/api/users',
+      loans: '/api/loans',
+      volunteers: '/api/volunteers',
     },
   });
 });
