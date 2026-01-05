@@ -140,7 +140,6 @@ app.get('/health', (req, res) => {
 // Helper function to register routes with and without /api prefix
 const registerRoutes = (path, router) => {
   app.use(`/api${path}`, router);
-  app.use(path, router);
 };
 
 // Register all API routes with both /api/... and /... prefixes
