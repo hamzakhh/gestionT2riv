@@ -32,7 +32,7 @@ import {
   Security as SecurityIcon,
 } from '@mui/icons-material';
 import MainCard from 'components/MainCard';
-import { getUsers, deleteUser } from 'services/userService';
+import userService from 'api/userService';
 
 const UsersList = () => {
   const [users, setUsers] = useState([]);
@@ -45,7 +45,7 @@ const UsersList = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const data = await getUsers();
+        const data = await userService.getUsers();
         setUsers(data);
       } catch (err) {
         setError(err.message || 'Erreur lors du chargement des utilisateurs');
@@ -60,7 +60,7 @@ const UsersList = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
       try {
-        await deleteUser(id);
+        await userService.deleteUser(id);
         setUsers(users.filter(user => user._id !== id));
       } catch (err) {
         setError('Erreur lors de la suppression de l\'utilisateur');
