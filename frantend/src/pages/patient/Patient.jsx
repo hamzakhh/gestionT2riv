@@ -31,8 +31,8 @@ const Patient = () => {
 
   const fetchPatients = async () => {
     try {
-      const data = await patientService.getPatients();
-      setPatients(data || []);
+      const response = await patientService.getPatients();
+      setPatients(response.docs || []);
     } catch (error) {
       console.error('Failed to fetch patients', error);
     }
