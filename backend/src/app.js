@@ -115,8 +115,8 @@ const limiter = rateLimit({
 
 app.use('/api', limiter);
 
-// Routes de base
-app.get('/', (req, res) => {
+// Routes de base - API info sous /api uniquement
+app.get('/api', (req, res) => {
   res.json({
     success: true,
     message: 'API Association Creative',
