@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
       open: true,
       port: PORT,
       host: true,
+      historyApiFallback: true,
       proxy: {
         '/api': {
           target: 'http://localhost:5000',
