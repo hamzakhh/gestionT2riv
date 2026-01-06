@@ -11,19 +11,46 @@ import {
   Paper,
   IconButton,
   Modal,
-  Typography
+  Typography,
+  Chip,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, PictureAsPdf as PdfIcon } from '@mui/icons-material';
+import { 
+  Edit as EditIcon, 
+  Delete as DeleteIcon, 
+  Add as AddIcon, 
+  PictureAsPdf as PdfIcon,
+  Visibility as ViewIcon,
+  Assignment as LoanIcon
+} from '@mui/icons-material';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import MainCard from 'components/MainCard';
 import PatientForm from './PatientForm';
-import patientService from 'api/patientService';
+import patientService from '../../services/patientService';
+import loanService from '../../services/loanService';
+import { 
+  formatPatientName, 
+  formatPatientContact,
+  hasActiveLoans,
+  getActiveLoansCount,
+  formatLoanStatus,
+  createPatientActions,
+  canDeletePatient
+} from '../../utils/patientLoanUtils';
 
 const Patient = () => {
   const [patients, setPatients] = useState([]);
   const [editingPatient, setEditingPatient] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedPatientLoans, setSelectedPatientLoans] = useState([]);
+  const [loansDialogOpen, setLoansDialogOpen] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
   useEffect(() => {
     fetchPatients();
@@ -70,12 +97,55 @@ const Patient = () => {
   };
 
   const handleDelete = async (id) => {
-    try {
-      await patientService.deletePatient(id);
-      fetchPatients();
-    } catch (error) {
-      console.error('Failed to delete patient', error);
+    const patient = patients.find(p => p._id === id);
+    const validation = canDeletePatient(patient);
+    
+    if (!validation.canDelete) {
+      alert(validation.reason);
+      return;
     }
+    
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce patient ?')) {
+      try {
+        await patientService.deletePatient(id);
+        fetchPatients();
+      } catch (error) {
+        console.error('Failed to delete patient', error);
+        alert('Erreur lors de la suppression du patient');
+      }
+    }
+  };
+
+  // Fonctions pour gérer les prêts des patients
+  const handleViewPatientLoans = async (patient) => {
+    try {
+      setSelectedPatient(patient);
+      const response = await loanService.getLoanHistory({ patientId: patient._id });
+      setSelectedPatientLoans(response.data || []);
+      setLoansDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch patient loans', error);
+    }
+  };
+
+  const handleCloseLoansDialog = () => {
+    setLoansDialogOpen(false);
+    setSelectedPatient(null);
+    setSelectedPatientLoans([]);
+  };
+
+  const handleCreateLoanForPatient = (patient) => {
+    // Naviguer vers le formulaire de prêt avec le patient pré-sélectionné
+    window.location.href = `/loans/new?patientId=${patient._id}`;
+  };
+
+  // Créer les handlers pour les actions du patient
+  const patientActionHandlers = {
+    onViewLoans: handleViewPatientLoans,
+    onCreateLoan: handleCreateLoanForPatient,
+    onEdit: handleOpenForm,
+    onDelete: handleDelete,
+    onExport: handlePrintPatient
   };
 
   const handlePrintPatient = async (patient) => {
@@ -500,6 +570,7 @@ const Patient = () => {
               <TableCell>Prénom</TableCell>
               <TableCell>Téléphone</TableCell>
               <TableCell>Type</TableCell>
+              <TableCell>Prêts actifs</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -511,19 +582,28 @@ const Patient = () => {
                 <TableCell>{patient.phone}</TableCell>
                 <TableCell>{patient.patientType}</TableCell>
                 <TableCell>
-                  <IconButton onClick={() => handleOpenForm(patient)} color="primary" title="Modifier">
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(patient._id)} color="error" title="Supprimer">
-                    <DeleteIcon />
-                  </IconButton>
-                  <IconButton 
-                    onClick={() => handlePrintPatient(patient)} 
-                    color="secondary" 
-                    title="Exporter en PDF"
-                  >
-                    <PdfIcon />
-                  </IconButton>
+                  <Chip 
+                    label={`${getActiveLoansCount(patient)} actifs`} 
+                    color={hasActiveLoans(patient) ? 'primary' : 'default'}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  {createPatientActions(patient, patientActionHandlers).map((action, index) => (
+                    <Tooltip key={index} title={action.tooltip}>
+                      <IconButton 
+                        onClick={action.onClick} 
+                        color={action.color} 
+                        size="small"
+                      >
+                        {action.icon === 'Assignment' && <LoanIcon />}
+                        {action.icon === 'Add' && <AddIcon />}
+                        {action.icon === 'Edit' && <EditIcon />}
+                        {action.icon === 'Delete' && <DeleteIcon />}
+                        {action.icon === 'PictureAsPdf' && <PdfIcon />}
+                      </IconButton>
+                    </Tooltip>
+                  ))}
                 </TableCell>
               </TableRow>
             ))}
@@ -554,6 +634,100 @@ const Patient = () => {
           />
         </Box>
       </Modal>
+
+      {/* Dialog pour afficher les prêts du patient */}
+      <Dialog 
+        open={loansDialogOpen} 
+        onClose={handleCloseLoansDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Typography variant="h6">
+              Prêts de {formatPatientName(selectedPatient)}
+            </Typography>
+            <Chip 
+              label={`${selectedPatientLoans.length} prêt(s)`}
+              color="primary"
+              size="small"
+            />
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {selectedPatientLoans.length === 0 ? (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Ce patient n'a aucun prêt enregistré.
+            </Alert>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Équipement</TableCell>
+                    <TableCell>Date de début</TableCell>
+                    <TableCell>Date de retour</TableCell>
+                    <TableCell>Statut</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {selectedPatientLoans.map((loan) => (
+                    <TableRow key={loan._id}>
+                      <TableCell>
+                        {loan.equipment?.name || 'N/A'}
+                        {loan.equipment?.serialNumber && ` (${loan.equipment.serialNumber})`}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(loan.startDate).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        {loan.expectedReturnDate 
+                          ? new Date(loan.expectedReturnDate).toLocaleDateString()
+                          : 'Non définie'
+                        }
+                      </TableCell>
+                      <TableCell>
+                        {formatLoanStatus(loan.status).label && (
+                          <Chip 
+                            label={formatLoanStatus(loan.status).label}
+                            color={formatLoanStatus(loan.status).color}
+                            size="small"
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title="Voir les détails">
+                          <IconButton 
+                            size="small"
+                            onClick={() => window.location.href = `/loans/${loan._id}`}
+                          >
+                            <ViewIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseLoansDialog}>
+            Fermer
+          </Button>
+          {selectedPatient && (
+            <Button 
+              variant="contained"
+              onClick={() => handleCreateLoanForPatient(selectedPatient)}
+              startIcon={<AddIcon />}
+            >
+              Créer un nouveau prêt
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </MainCard>
   );
 };
