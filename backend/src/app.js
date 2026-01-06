@@ -165,11 +165,11 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/patients', patientRoutes);
 
 // Servir les fichiers statiques du frontend
-app.use(express.static(path.join(__dirname, '../../frantend/build')));
+app.use(express.static(path.join(__dirname, '../../frantend/dist')));
 
 // Catch-all handler pour le routing SPA
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../frantend/build/index.html'));
+  res.sendFile(path.join(__dirname, '../../frantend/dist/index.html'));
 });
 
 // Gestion des erreurs
