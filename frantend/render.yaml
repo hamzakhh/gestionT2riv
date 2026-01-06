@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: creative-association-frontend
+    env: static
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_API_URL
+        value: https://gestiont2riv.onrender.com
+      - key: VITE_APP_NAME
+        value: Creative Association
+      - key: VITE_APP_VERSION
+        value: 1.0.0
