@@ -34,8 +34,7 @@ const RamadhanPage = Loadable(lazy(() => import('../pages/ramadhan')));
 const DonRamadhan = Loadable(lazy(() => import('../pages/ramadhan/DonRamadhan')));
 const Patient = Loadable(lazy(() => import('../pages/patient/Patient')));
 
-// Zakat
-const ZakatList = Loadable(lazy(() => import('../pages/zakat/ZakatList')));
+// Zakat module temporarily removed
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -63,16 +62,6 @@ const MainRoutes = {
         {
           path: '',
           element: <RoleGuard pageKey="donors"><DonorList /></RoleGuard>
-        }
-      ]
-    },
-    // Zakat routes
-    {
-      path: 'zakat',
-      children: [
-        {
-          path: 'list',
-          element: <RoleGuard pageKey="zakat"><ZakatList /></RoleGuard>
         }
       ]
     },
@@ -150,10 +139,6 @@ const MainRoutes = {
     {
       path: 'don-ramadhan',
       element: <RoleGuard pageKey="don-ramadhan"><DonRamadhan /></RoleGuard>
-    },
-    {
-      path: 'zakat',
-      element: <RoleGuard pageKey="zakat"><ZakatList /></RoleGuard>
     },
     // Routes Association
     {

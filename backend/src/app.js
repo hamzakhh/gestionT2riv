@@ -17,7 +17,6 @@ const equipmentRoutes = require('./routes/equipment');
 const orphanRoutes = require('./routes/orphans');
 const donorRoutes = require('./routes/donors');
 const donationRoutes = require('./routes/donations');
-const zakatRoutes = require('./routes/zakat');
 const volunteerRoutes = require('./routes/volunteerRoutes');
 const userRoutes = require('./routes/users');
 const patientRoutes = require('./routes/patientRoutes');
@@ -77,6 +76,9 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Servir les fichiers statiques du frontend React
+app.use(express.static(path.join(__dirname, '../frantend/dist')));
+
 // Servir les fichiers statiques avec en-têtes CORS
 app.use('/uploads', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -125,35 +127,11 @@ app.get('/', (req, res) => {
       orphans: '/api/orphans',
       donors: '/api/donors',
       donations: '/api/donations',
-      zakat: '/api/zakat',
       patients: '/api/patients',
       users: '/api/users',
       loans: '/api/loans',
       volunteers: '/api/volunteers',
     },
-  });
-});
-
-// Routes directes pour compatibilité frontend
-app.get('/dashboard/default', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Dashboard data',
-    data: {
-      stats: {
-        totalOrphans: 0,
-        totalDonations: 0,
-        activeVolunteers: 0,
-        pendingRequests: 0
-      }
-    }
-  });
-});
-
-app.get('/login', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Login endpoint - use POST /api/auth/login for authentication'
   });
 });
 
@@ -180,24 +158,17 @@ registerRoutes('/equipment', equipmentRoutes);
 registerRoutes('/orphans', orphanRoutes);
 registerRoutes('/donors', donorRoutes);
 registerRoutes('/donations', donationRoutes);
-registerRoutes('/zakat', zakatRoutes);
 registerRoutes('/loans', loanRoutes);
-
-// Also register routes without /api prefix for direct access
-app.use('/auth', authRoutes);
-app.use('/users', userRoutes);
-app.use('/volunteers', volunteerRoutes);
-app.use('/patients', patientRoutes);
-app.use('/equipment', equipmentRoutes);
-app.use('/orphans', orphanRoutes);
-app.use('/donors', donorRoutes);
-app.use('/donations', donationRoutes);
-app.use('/zakat', zakatRoutes);
-app.use('/loans', loanRoutes);
 // Keep v1 routes as they are for backward compatibility
 app.use('/api/v1/volunteers', volunteerRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/patients', patientRoutes);
+
+// Catch-all handler: pour toute requête qui ne correspond pas à une route API,
+// renvoyer le fichier index.html de React (pour le routing côté client)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frantend/dist/index.html'));
+});
 
 // Gestion des erreurs
 app.use(notFound);
