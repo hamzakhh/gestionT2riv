@@ -113,6 +113,9 @@ const limiter = rateLimit({
 
 app.use('/api', limiter);
 
+// Servir les fichiers statiques du frontend build
+app.use(express.static(path.join(__dirname, '../../frantend/dist')));
+
 // Routes de base
 app.get('/', (req, res) => {
   res.json({
@@ -163,6 +166,16 @@ registerRoutes('/loans', loanRoutes);
 app.use('/api/v1/volunteers', volunteerRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/patients', patientRoutes);
+
+// Catch-all pour React Router - sert index.html pour toutes les routes non-API
+app.get('*', (req, res, next) => {
+  // Si c'est une route API, laisser le middleware 404 gérer
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  // Sinon servir index.html pour React Router
+  res.sendFile(path.join(__dirname, '../../frantend/dist/index.html'));
+});
 
 // Gestion des erreurs
 app.use(notFound);
