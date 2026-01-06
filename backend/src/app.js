@@ -77,6 +77,22 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Servir les fichiers statiques du frontend en production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../../frantend/dist')));
+}
+
+// En développement, proxy vers le frontend Vite (uniquement pour les routes non-API)
+if (process.env.NODE_ENV === 'development') {
+  const { createProxyMiddleware } = require('http-proxy-middleware');
+  app.use(/^\/(?!api).*/, createProxyMiddleware({
+    target: 'http://localhost:3000',
+    changeOrigin: true,
+    ws: true,
+    logLevel: 'silent'
+  }));
+}
+
 // Servir les fichiers statiques avec en-têtes CORS
 app.use('/uploads', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -164,13 +180,12 @@ app.use('/api/v1/volunteers', volunteerRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/patients', patientRoutes);
 
-// Servir les fichiers statiques du frontend
-app.use(express.static(path.join(__dirname, '../../frantend/dist')));
-
-// Catch-all handler pour le routing SPA
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../frantend/dist/index.html'));
-});
+// Catch-all handler pour servir React app en production
+if (process.env.NODE_ENV === 'production') {
+  app.get(/^\/(?!api).*/, (req, res) => {
+    res.sendFile(path.join(__dirname, '../../frantend/dist/index.html'));
+  });
+}
 
 // Gestion des erreurs
 app.use(notFound);
