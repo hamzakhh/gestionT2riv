@@ -1,11 +1,8 @@
 import axios from 'axios';
 import { API_BASE_URL } from 'config';
 
-const API_URL = `${API_BASE_URL}/loans`;
-
-// Créer une instance axios avec une configuration de base
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -37,7 +34,7 @@ const getLoans = async ({ page = 1, limit = 10, status = 'all', search = '', sor
       sort: sortOrder
     };
 
-    const response = await api.get('', { params });
+    const response = await api.get('/loans', { params });
     return response.data;
   } catch (error) {
     console.error('Error fetching loans:', error);
@@ -53,7 +50,7 @@ const getActiveLoans = async (page = 1, limit = 10) => {
 // Créer un nouveau prêt
 const createLoan = async (loanData) => {
   try {
-    const response = await api.post('/', loanData);
+    const response = await api.post('/loans', loanData);
     return response.data;
   } catch (error) {
     console.error('Error creating loan:', error);
@@ -86,7 +83,7 @@ const getLoanDetails = async (loanId) => {
 // Obtenir l'historique des prêts
 const getLoanHistory = async (filters = {}) => {
   try {
-    const response = await api.get('', { params: filters });
+    const response = await api.get('/loans', { params: filters });
     return response.data;
   } catch (error) {
     console.error('Error fetching loan history:', error);
@@ -97,7 +94,7 @@ const getLoanHistory = async (filters = {}) => {
 // Obtenir les statistiques des prêts
 const getLoanStats = async () => {
   try {
-    const response = await api.get('/stats');
+    const response = await api.get('/loans/stats');
     return response.data;
   } catch (error) {
     console.error('Error fetching loan stats:', error);
@@ -117,7 +114,7 @@ const loanService = {
   // Export to CSV
   exportToCSV: async (filters = {}) => {
     try {
-      const response = await api.get('/export/csv', { 
+      const response = await api.get('/loans/export/csv', { 
         params: filters,
         responseType: 'blob'
       });
@@ -130,7 +127,7 @@ const loanService = {
   // Export to PDF
   exportToPDF: async (filters = {}) => {
     try {
-      const response = await api.get('/export/pdf', { 
+      const response = await api.get('/loans/export/pdf', { 
         params: filters,
         responseType: 'blob'
       });
@@ -143,7 +140,7 @@ const loanService = {
   // Bulk update status
   bulkUpdateStatus: async (loanIds, status) => {
     try {
-      const response = await api.patch('/bulk-update-status', { loanIds, status });
+      const response = await api.patch('/loans/bulk-update-status', { loanIds, status });
       return response.data;
     } catch (error) {
       console.error('Error bulk updating loan status:', error);

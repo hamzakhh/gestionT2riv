@@ -2,7 +2,7 @@ import axios from 'axios';
 import { API_BASE_URL } from 'config';
 
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/equipment`,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -27,7 +27,7 @@ const equipmentService = {
   getAvailableEquipment: async () => {
     try {
       console.log('Fetching available equipment...');
-      const response = await api.get('/available');
+      const response = await api.get('/equipment/available');
       console.log('Available equipment response:', response);
       
       // Vérifier si la réponse contient des données

@@ -1,20 +1,31 @@
 import axios from 'axios';
 import { API_BASE_URL } from 'config';
 
-const API_URL = `${API_BASE_URL}/volunteers`;
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // Récupérer tous les bénévoles avec pagination
 const getVolunteers = async (page = 1, limit = 10, search = '') => {
-  const token = localStorage.getItem('token');
-  
   try {
-    const response = await axios.get(API_URL, {
+    const response = await api.get('/volunteers', {
       params: { page, limit, search },
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      withCredentials: true
     });
     
     // Vérifier si la réponse contient directement les données

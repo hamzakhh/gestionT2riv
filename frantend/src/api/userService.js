@@ -1,10 +1,8 @@
 import axios from 'axios';
 import { API_BASE_URL } from 'config';
 
-const API_URL = `${API_BASE_URL}/users`;
-
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -25,7 +23,7 @@ api.interceptors.request.use(
 
 const getUsers = async (page = 1, limit = 10, search = '') => {
   try {
-    const response = await api.get('', { params: { page, limit, search } });
+    const response = await api.get('/v1/users', { params: { page, limit, search } });
     return response.data;
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -35,7 +33,7 @@ const getUsers = async (page = 1, limit = 10, search = '') => {
 
 const getUserById = async (id) => {
   try {
-    const response = await api.get(`/${id}`);
+    const response = await api.get(`/v1/users/${id}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching user ${id}:`, error);
@@ -45,7 +43,7 @@ const getUserById = async (id) => {
 
 const createUser = async (userData) => {
   try {
-    const response = await api.post('/', userData);
+    const response = await api.post('/v1/users', userData);
     return response.data;
   } catch (error) {
     console.error('Error creating user:', error);
@@ -55,7 +53,7 @@ const createUser = async (userData) => {
 
 const updateUser = async (id, userData) => {
   try {
-    const response = await api.put(`/${id}`, userData);
+    const response = await api.put(`/v1/users/${id}`, userData);
     return response.data;
   } catch (error) {
     console.error(`Error updating user ${id}:`, error);
@@ -65,7 +63,7 @@ const updateUser = async (id, userData) => {
 
 const deleteUser = async (id) => {
   try {
-    const response = await api.delete(`/${id}`);
+    const response = await api.delete(`/v1/users/${id}`);
     return response.data;
   } catch (error) {
     console.error(`Error deleting user ${id}:`, error);
