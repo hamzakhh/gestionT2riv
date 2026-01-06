@@ -46,7 +46,22 @@ const UsersList = () => {
       try {
         setLoading(true);
         const data = await userService.getUsers();
-        setUsers(data);
+        console.log('Réponse API users:', data);
+        console.log('Array.isArray(data):', Array.isArray(data));
+        console.log('data.data existe?', !!data.data);
+        
+        // Gérer différents formats de réponse
+        let usersData = [];
+        if (data && data.data && Array.isArray(data.data)) {
+          usersData = data.data;
+        } else if (data && Array.isArray(data)) {
+          usersData = data;
+        } else if (data && data.docs && Array.isArray(data.docs)) {
+          usersData = data.docs;
+        }
+        
+        console.log('Données utilisateurs finales:', usersData);
+        setUsers(usersData);
       } catch (err) {
         setError(err.message || 'Erreur lors du chargement des utilisateurs');
       } finally {
@@ -61,18 +76,18 @@ const UsersList = () => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
       try {
         await userService.deleteUser(id);
-        setUsers(users.filter(user => user._id !== id));
+        setUsers(Array.isArray(users) ? users.filter(user => user._id !== id) : []);
       } catch (err) {
         setError('Erreur lors de la suppression de l\'utilisateur');
       }
     }
   };
 
-  const filteredUsers = users.filter(user => 
+  const filteredUsers = Array.isArray(users) ? users.filter(user => 
     user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) : [];
 
   const getRoleIcon = (role) => {
     switch (role) {
@@ -169,7 +184,7 @@ const UsersList = () => {
             <CardContent sx={{ textAlign: 'center', py: 3 }}>
               <PeopleIcon style={{ fontSize: '2.5rem', marginBottom: '1rem', opacity: 0.8 }} />
               <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                {users.length}
+                {Array.isArray(users) ? users.length : 0}
               </Typography>
               <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
                 Total des Utilisateurs
@@ -191,7 +206,7 @@ const UsersList = () => {
             <CardContent sx={{ textAlign: 'center', py: 3 }}>
               <ActiveIcon style={{ fontSize: '2.5rem', marginBottom: '1rem', opacity: 0.8 }} />
               <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                {users.filter(u => u.isActive).length}
+                {Array.isArray(users) ? users.filter(u => u.isActive).length : 0}
               </Typography>
               <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
                 Utilisateurs Actifs
@@ -213,7 +228,7 @@ const UsersList = () => {
             <CardContent sx={{ textAlign: 'center', py: 3 }}>
               <SecurityIcon style={{ fontSize: '2.5rem', marginBottom: '1rem', opacity: 0.8 }} />
               <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                {users.filter(u => u.role === 'admin').length}
+                {Array.isArray(users) ? users.filter(u => u.role === 'admin').length : 0}
               </Typography>
               <Typography variant="subtitle1" sx={{ opacity: 0.9 }}>
                 Administrateurs
