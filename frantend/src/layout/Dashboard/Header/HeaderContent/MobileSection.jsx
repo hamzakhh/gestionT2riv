@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 // material-ui
 import AppBar from '@mui/material/AppBar';
@@ -19,7 +19,7 @@ import MoreOutlined from '@ant-design/icons/MoreOutlined';
 
 // ==============================|| HEADER CONTENT - MOBILE ||============================== //
 
-export default function MobileSection() {
+const MobileSection = React.forwardRef((props, ref) => {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef(null);
 
@@ -97,4 +97,8 @@ export default function MobileSection() {
       </Popper>
     </>
   );
-}
+});
+
+MobileSection.displayName = 'MobileSection';
+
+export default MobileSection;
