@@ -167,11 +167,11 @@ app.use('/api/v1/patients', patientRoutes);
 // Servir les fichiers statiques du frontend en production
 if (process.env.NODE_ENV === 'production') {
   // Servir les fichiers statiques du build React
-  app.use(express.static(path.join(__dirname, '../frantend/dist')));
+  app.use(express.static(path.join(__dirname, '../../frantend/dist')));
   
   // Catch-all handler pour les routes React - doit être APRÈS les routes API
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frantend/dist', 'index.html'));
+    res.sendFile(path.join(__dirname, '../../frantend/dist', 'index.html'));
   });
 }
 
