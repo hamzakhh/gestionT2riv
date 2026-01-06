@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import {
@@ -38,9 +38,9 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, addDays } from 'date-fns';
 import fr from 'date-fns/locale/fr';
 import MainCard from 'components/MainCard';
-import loanService from '../../services/loanService';
-import equipmentService from '../../services/equipmentService';
-import patientService from '../../services/patientService';
+import loanService from 'api/loanService';
+import equipmentService from 'api/equipmentService';
+import patientService from 'api/patientService';
 
 // Schéma de validation avec Yup
 const validationSchema = Yup.object({
@@ -55,13 +55,11 @@ const validationSchema = Yup.object({
 
 const LoanForm = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [availableEquipment, setAvailableEquipment] = useState([]);
   const [patients, setPatients] = useState([]);
-  const [preselectedPatientId, setPreselectedPatientId] = useState(searchParams.get('patientId'));
 
   // Charger les équipements disponibles et les patients
   useEffect(() => {
@@ -119,7 +117,7 @@ const LoanForm = () => {
   const formik = useFormik({
     initialValues: {
       equipmentId: '',
-      patientId: preselectedPatientId || '',
+      patientId: '',
       startDate: new Date(),
       expectedReturnDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 jours par défaut
       notes: ''
@@ -179,16 +177,6 @@ const LoanForm = () => {
           </IconButton>
           <Typography variant="h4">Nouveau prêt d'équipement</Typography>
         </Box>
-
-        {preselectedPatientId && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Patient pré-sélectionné: {
-              patients.find(p => p._id === preselectedPatientId) 
-                ? `${patients.find(p => p._id === preselectedPatientId).firstName} ${patients.find(p => p._id === preselectedPatientId).lastName}`
-                : 'Chargement...'
-            }
-          </Alert>
-        )}
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>

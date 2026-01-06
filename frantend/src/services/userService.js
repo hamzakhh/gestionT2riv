@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { API_URL } from '../config';
 
-const API_ENDPOINT = `${API_URL}/api/v1/users`;
+const API_ENDPOINT = `${API_URL}/users`;
 
 // Récupérer le token du stockage local
 const getAuthToken = () => {
