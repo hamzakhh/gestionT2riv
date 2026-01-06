@@ -52,7 +52,7 @@ const getPatients = async (page = 1, limit = 10, search = '') => {
 // Get a patient by ID
 const getPatientById = async (id) => {
   const token = localStorage.getItem('token');
-  const response = await axios.get(`${API_URL}/${id}`, {
+  const response = await axios.get(`${API_URL}/patients/${id}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return response.data;

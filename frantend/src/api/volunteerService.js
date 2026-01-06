@@ -55,7 +55,7 @@ const getVolunteers = async (page = 1, limit = 10, search = '') => {
 // Récupérer un bénévole par son ID
 const getVolunteerById = async (id) => {
   const token = localStorage.getItem('token');
-  const response = await axios.get(`${API_URL}/${id}`, {
+  const response = await axios.get(`${API_URL}/volunteers/${id}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return response.data;

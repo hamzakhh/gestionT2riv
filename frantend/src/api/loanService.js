@@ -61,7 +61,7 @@ const createLoan = async (loanData) => {
 // Retourner un équipement
 const returnEquipment = async (loanId, returnData) => {
   try {
-    const response = await api.put(`/${loanId}/return`, returnData);
+    const response = await api.put(`/loans/${loanId}/return`, returnData);
     return response.data;
   } catch (error) {
     console.error(`Error returning equipment for loan ${loanId}:`, error);
@@ -72,7 +72,7 @@ const returnEquipment = async (loanId, returnData) => {
 // Obtenir les détails d'un prêt
 const getLoanDetails = async (loanId) => {
   try {
-    const response = await api.get(`/${loanId}`);
+    const response = await api.get(`/loans/${loanId}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching loan details for id ${loanId}:`, error);
@@ -151,7 +151,7 @@ const loanService = {
   // Cancel a loan
   cancelLoan: async (loanId, reason) => {
     try {
-      const response = await api.put(`/${loanId}/cancel`, { reason });
+      const response = await api.put(`/loans/${loanId}/cancel`, { reason });
       return response.data;
     } catch (error) {
       console.error('Error cancelling loan:', error);
@@ -161,7 +161,7 @@ const loanService = {
   // Delete a loan (only for completed or cancelled loans)
   deleteLoan: async (loanId) => {
     try {
-      const response = await api.delete(`/${loanId}`);
+      const response = await api.delete(`/loans/${loanId}`);
       return response.data;
     } catch (error) {
       console.error('Error deleting loan:', error);
