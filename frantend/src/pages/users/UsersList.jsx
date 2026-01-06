@@ -61,7 +61,7 @@ const UsersList = () => {
         }
         
         console.log('Données utilisateurs finales:', usersData);
-        setUsers(usersData);
+        setUsers(Array.isArray(usersData) ? usersData : []);
       } catch (err) {
         setError(err.message || 'Erreur lors du chargement des utilisateurs');
       } finally {
