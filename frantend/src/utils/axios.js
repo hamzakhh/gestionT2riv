@@ -39,6 +39,13 @@ axiosInstance.interceptors.response.use(
     
     console.error(`❌ Erreur: ${method} ${url} → ${status}`);
     
+    // Gérer spécifiquement les erreurs 429 (rate limit)
+    if (error.response?.status === 429) {
+      console.warn('🚦 Rate limit atteint - patientez avant de réessayer');
+      // Ne pas déconnecter pour les erreurs 429
+      return Promise.reject(error);
+    }
+    
     if (error.response?.status === 401) {
       // NE PAS déconnecter si c'est la requête de login elle-même qui échoue
       if (url.includes('/auth/login')) {

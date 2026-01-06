@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import authService from 'services/authService';
 
 const AuthContext = createContext(null);
@@ -6,24 +6,51 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
+    // Éviter les initialisations multiples
+    if (hasInitialized.current) {
+      return;
+    }
+    hasInitialized.current = true;
+
     // Vérifier si l'utilisateur est connecté au chargement
     const initAuth = async () => {
-      if (authService.isAuthenticated()) {
-        try {
-          // Essayer de récupérer les données fraîches du serveur
-          const response = await authService.getProfile();
-          setUser(response.data);
-          // Mettre à jour localStorage avec les données fraîches
-          localStorage.setItem('user', JSON.stringify(response.data));
-        } catch (error) {
-          // Si la requête échoue, utiliser les données locales
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Essayer de récupérer les données fraîches du serveur
+        console.log('🔐 Initialisation auth - récupération profil...');
+        const response = await authService.getProfile();
+        setUser(response.data);
+        // Mettre à jour localStorage avec les données fraîches
+        localStorage.setItem('user', JSON.stringify(response.data));
+        console.log('✅ Profil récupéré avec succès');
+      } catch (error) {
+        console.warn('⚠️ Erreur récupération profil:', error.response?.status || error.message);
+        
+        // Si erreur 429 (rate limit), utiliser les données locales
+        if (error.response?.status === 429) {
+          console.log('🔄 Rate limit atteint, utilisation données locales');
           const currentUser = authService.getCurrentUser();
           if (currentUser) {
             setUser(currentUser);
           } else {
             // Si pas de données locales non plus, déconnecter
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          }
+        } else {
+          // Pour les autres erreurs, utiliser les données locales
+          const currentUser = authService.getCurrentUser();
+          if (currentUser) {
+            setUser(currentUser);
+          } else {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
           }
