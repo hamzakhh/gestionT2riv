@@ -134,6 +134,29 @@ app.get('/', (req, res) => {
   });
 });
 
+// Routes directes pour compatibilité frontend
+app.get('/dashboard/default', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Dashboard data',
+    data: {
+      stats: {
+        totalOrphans: 0,
+        totalDonations: 0,
+        activeVolunteers: 0,
+        pendingRequests: 0
+      }
+    }
+  });
+});
+
+app.get('/login', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Login endpoint - use POST /api/auth/login for authentication'
+  });
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({
@@ -159,21 +182,22 @@ registerRoutes('/donors', donorRoutes);
 registerRoutes('/donations', donationRoutes);
 registerRoutes('/zakat', zakatRoutes);
 registerRoutes('/loans', loanRoutes);
+
+// Also register routes without /api prefix for direct access
+app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
+app.use('/volunteers', volunteerRoutes);
+app.use('/patients', patientRoutes);
+app.use('/equipment', equipmentRoutes);
+app.use('/orphans', orphanRoutes);
+app.use('/donors', donorRoutes);
+app.use('/donations', donationRoutes);
+app.use('/zakat', zakatRoutes);
+app.use('/loans', loanRoutes);
 // Keep v1 routes as they are for backward compatibility
 app.use('/api/v1/volunteers', volunteerRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/patients', patientRoutes);
-
-// Servir les fichiers statiques du frontend en production
-if (process.env.NODE_ENV === 'production') {
-  // Servir les fichiers statiques du build React
-  app.use(express.static(path.join(__dirname, '../../frantend/dist')));
-  
-  // Catch-all handler pour les routes React - doit être APRÈS les routes API
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../../frantend/dist', 'index.html'));
-  });
-}
 
 // Gestion des erreurs
 app.use(notFound);

@@ -21,6 +21,26 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
           ws: true
+        },
+        '/dashboard': {
+          target: 'http://localhost:5000',
+          changeOrigin: true,
+          secure: false
+        },
+        '/login': {
+          target: 'http://localhost:5000',
+          changeOrigin: true,
+          secure: false
+        },
+        '/equipment': {
+          target: 'http://localhost:5000',
+          changeOrigin: true,
+          secure: false
+        },
+        '/auth': {
+          target: 'http://localhost:5000',
+          changeOrigin: true,
+          secure: false
         }
       }
     },
