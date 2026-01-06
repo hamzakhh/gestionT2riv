@@ -32,9 +32,25 @@ const Patient = () => {
   const fetchPatients = async () => {
     try {
       const response = await patientService.getPatients();
-      setPatients(response.docs || []);
+      console.log('Patients response:', response);
+      
+      // Gérer différents formats de réponse
+      let patientsData = [];
+      if (response && response.docs) {
+        patientsData = response.docs;
+      } else if (response && response.data && response.data.docs) {
+        patientsData = response.data.docs;
+      } else if (response && Array.isArray(response)) {
+        patientsData = response;
+      } else if (response && response.data && Array.isArray(response.data)) {
+        patientsData = response.data;
+      }
+      
+      console.log('Patients data to display:', patientsData);
+      setPatients(patientsData);
     } catch (error) {
       console.error('Failed to fetch patients', error);
+      setPatients([]);
     }
   };
 
@@ -504,29 +520,39 @@ const Patient = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {patients.map((patient) => (
-              <TableRow key={patient._id}>
-                <TableCell>{patient.lastName}</TableCell>
-                <TableCell>{patient.firstName}</TableCell>
-                <TableCell>{patient.phone}</TableCell>
-                <TableCell>{patient.patientType}</TableCell>
-                <TableCell>
-                  <IconButton onClick={() => handleOpenForm(patient)} color="primary" title="Modifier">
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(patient._id)} color="error" title="Supprimer">
-                    <DeleteIcon />
-                  </IconButton>
-                  <IconButton 
-                    onClick={() => handlePrintPatient(patient)} 
-                    color="secondary" 
-                    title="Exporter en PDF"
-                  >
-                    <PdfIcon />
-                  </IconButton>
+            {patients.length > 0 ? (
+              patients.map((patient) => (
+                <TableRow key={patient._id}>
+                  <TableCell>{patient.lastName}</TableCell>
+                  <TableCell>{patient.firstName}</TableCell>
+                  <TableCell>{patient.phone}</TableCell>
+                  <TableCell>{patient.patientType}</TableCell>
+                  <TableCell>
+                    <IconButton onClick={() => handleOpenForm(patient)} color="primary" title="Modifier">
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton onClick={() => handleDelete(patient._id)} color="error" title="Supprimer">
+                      <DeleteIcon />
+                    </IconButton>
+                    <IconButton 
+                      onClick={() => handlePrintPatient(patient)} 
+                      color="secondary" 
+                      title="Exporter en PDF"
+                    >
+                      <PdfIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} align="center">
+                  <Typography variant="body2" sx={{ py: 3, color: 'text.secondary' }}>
+                    Aucun patient trouvé
+                  </Typography>
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </TableContainer>
