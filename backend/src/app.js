@@ -15,7 +15,7 @@ dotenv.config();
 
 import connectDB from './config/database.js';
 import logger from './utils/logger.js';
-import { errorHandler, notFound } from './middleware/errorHandler.js';
+import { errorHandler, notFound  }from './middleware/errorHandler.js';
 
 // Importer les routes
 import authRoutes from './routes/auth.js';
