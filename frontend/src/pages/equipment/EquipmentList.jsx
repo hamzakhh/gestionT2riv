@@ -694,8 +694,16 @@ const EquipmentList = () => {
         return;
       }
       
-      console.log('Envoi des données de mise à jour:', formData);
-      await equipmentService.update(selectedItem._id, formData);
+      // Clean the data before sending
+      const cleanData = {
+        ...formData,
+        assignedUserId: formData.assignedUserId || null,
+        notes: formData.notes || null,
+        entryDate: formData.entryDate || null
+      };
+      
+      console.log('Envoi des données de mise à jour:', cleanData);
+      await equipmentService.update(selectedItem._id, cleanData);
       await loadEquipment();
       setOpenEditDialog(false);
     } catch (error) {

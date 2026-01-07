@@ -125,11 +125,35 @@ export const updateEquipment = async (req, res, next) => {
     delete req.body.maintenanceHistory;
     delete req.body.currentBorrower;
 
-    console.log('Body après nettoyage:', req.body);
+    // Nettoyer les données
+    const cleanBody = { ...req.body };
+    
+    // Gérer assignedUserId vide
+    if (cleanBody.assignedUserId === '' || cleanBody.assignedUserId === null || cleanBody.assignedUserId === undefined) {
+      cleanBody.assignedUserId = null;
+    }
+    
+    // Gérer les valeurs de condition invalides - mapper les anciennes valeurs vers les nouvelles
+    const conditionMapping = {
+      'Mauvais état': 'poor',
+      'Très mauvais état': 'poor',
+      'Bon état': 'good',
+      'Très bon état': 'excellent',
+      'État moyen': 'fair',
+      'Neuf': 'new',
+      'Nouveau': 'new'
+    };
+    
+    if (cleanBody.condition && conditionMapping[cleanBody.condition]) {
+      console.log('Mapping condition:', cleanBody.condition, '->', conditionMapping[cleanBody.condition]);
+      cleanBody.condition = conditionMapping[cleanBody.condition];
+    }
+
+    console.log('Body après nettoyage:', cleanBody);
 
     // Validation manuelle des champs requis
     const requiredFields = ['name', 'category', 'type', 'serialNumber'];
-    const missingFields = requiredFields.filter(field => !req.body[field]);
+    const missingFields = requiredFields.filter(field => !cleanBody[field]);
     
     if (missingFields.length > 0) {
       console.error('Champs requis manquants:', missingFields);
@@ -142,8 +166,8 @@ export const updateEquipment = async (req, res, next) => {
 
     // Validation des enums
     const validCategories = ['Médical', 'Bureautique'];
-    if (req.body.category && !validCategories.includes(req.body.category)) {
-      console.error('Catégorie invalide:', req.body.category);
+    if (cleanBody.category && !validCategories.includes(cleanBody.category)) {
+      console.error('Catégorie invalide:', cleanBody.category);
       return res.status(400).json({
         success: false,
         message: 'Catégorie invalide',
@@ -151,7 +175,7 @@ export const updateEquipment = async (req, res, next) => {
       });
     }
 
-    Object.assign(equipment, req.body);
+    Object.assign(equipment, cleanBody);
     
     // Validation avant sauvegarde
     const validationError = equipment.validateSync();
