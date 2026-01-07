@@ -80,7 +80,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Servir les fichiers statiques du frontend React
-app.use(express.static(path.join(__dirname, 'frontend/dist')));
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Servir les fichiers statiques avec en-têtes CORS
 app.use('/uploads', (req, res, next) => {
@@ -171,7 +171,7 @@ app.use('/api/v1/patients', patientRoutes);
 // renvoyer le fichier index.html de React (pour le routing côté client)
 // DOIT être placé APRÈS toutes les routes API mais AVANT les middlewares d'erreur
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend/dist/index.html'));
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
 // Gestion des erreurs (DOIT être à la fin)
