@@ -3,13 +3,10 @@ dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
-
-const __dirname = path.resolve();
-
+import { fileURLToPath } from 'url';
 import connectDB from './config/database.js';
 import logger from './utils/logger.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
@@ -24,6 +21,10 @@ import volunteerRoutes from './routes/volunteerRoutes.js';
 import userRoutes from './routes/users.js';
 import patientRoutes from './routes/patientRoutes.js';
 import loanRoutes from './routes/loans.js';
+
+// ✅ vrai __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Initialiser l'application
 const app = express();
@@ -171,6 +172,8 @@ app.use('/api/v1/patients', patientRoutes);
 // renvoyer le fichier index.html de React (pour le routing côté client)
 // DOIT être placé APRÈS toutes les routes API mais AVANT les middlewares d'erreur
 app.get('*', (req, res) => {
+  // 🔎 Vérification EXPRESS
+  console.log(path.join(__dirname, '../frontend/dist/index.html'));
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
