@@ -4,7 +4,7 @@ const authService = {
   // Connexion
   login: async (email, password) => {
     const response = await axios.post('/auth/login', { email, password });
-    if (response.data.success) {
+    if (response.data.success && response.data.data) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
     }
@@ -14,7 +14,7 @@ const authService = {
   // Inscription
   register: async (userData) => {
     const response = await axios.post('/auth/register', userData);
-    if (response.data.success) {
+    if (response.data.success && response.data.data) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
     }
@@ -40,7 +40,7 @@ const authService = {
   // Mettre à jour le profil
   updateProfile: async (data) => {
     const response = await axios.put('/auth/profile', data);
-    if (response.data.success) {
+    if (response.data.success && response.data.data) {
       localStorage.setItem('user', JSON.stringify(response.data.data));
     }
     return response.data;

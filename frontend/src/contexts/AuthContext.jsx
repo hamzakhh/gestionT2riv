@@ -27,10 +27,12 @@ export const AuthProvider = ({ children }) => {
         // Essayer de récupérer les données fraîches du serveur
         console.log('🔐 Initialisation auth - récupération profil...');
         const response = await authService.getProfile();
-        setUser(response.data);
-        // Mettre à jour localStorage avec les données fraîches
-        localStorage.setItem('user', JSON.stringify(response.data));
-        console.log('✅ Profil récupéré avec succès');
+        if (response.data) {
+          setUser(response.data);
+          // Mettre à jour localStorage avec les données fraîches
+          localStorage.setItem('user', JSON.stringify(response.data));
+          console.log('✅ Profil récupéré avec succès');
+        }
       } catch (error) {
         console.warn('⚠️ Erreur récupération profil:', error.response?.status || error.message);
         
@@ -64,13 +66,17 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const response = await authService.login(email, password);
-    setUser(response.data.user);
+    if (response.data && response.data.user) {
+      setUser(response.data.user);
+    }
     return response;
   };
 
   const register = async (userData) => {
     const response = await authService.register(userData);
-    setUser(response.data.user);
+    if (response.data && response.data.user) {
+      setUser(response.data.user);
+    }
     return response;
   };
 
@@ -81,15 +87,19 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (data) => {
     const response = await authService.updateProfile(data);
-    setUser(response.data);
+    if (response.data) {
+      setUser(response.data);
+    }
     return response;
   };
 
   const refreshUser = async () => {
     try {
       const response = await authService.getProfile();
-      setUser(response.data);
-      localStorage.setItem('user', JSON.stringify(response.data));
+      if (response.data) {
+        setUser(response.data);
+        localStorage.setItem('user', JSON.stringify(response.data));
+      }
     } catch (error) {
       // If refresh fails, logout user
       logout();
