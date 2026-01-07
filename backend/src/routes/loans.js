@@ -8,7 +8,8 @@ import {
   cancelLoan,
   getLoanHistory,
   getLoanStats,
-  deleteLoan
+  deleteLoan,
+  fixActiveLoans
 } from '../controllers/loanController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
@@ -27,6 +28,9 @@ router.get('/', getLoanHistory);
 
 // 1.4 Route pour créer un prêt (doit être avant /:id)
 router.post('/', authorize('admin', 'medical'), createLoan);
+
+// 1.5 Route pour corriger les activeLoans négatifs (maintenance)
+router.post('/fix-active-loans', authorize('admin'), fixActiveLoans);
 
 // 2. Définir ensuite les routes avec paramètres
 // 2.1 Route pour retourner un équipement

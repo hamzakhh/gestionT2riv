@@ -149,8 +149,8 @@ loanSchema.methods.markAsReturned = async function(conditionAfter, notes, userId
     await Patient.findByIdAndUpdate(
       this.patient,
       {
-        $pull: { borrowedEquipment: this.equipment },
-        $inc: { activeLoans: -1 }
+        $pull: { borrowedEquipment: this.equipment }
+        // Ne pas manipuler activeLoans manuellement - le middleware du Patient s'en charge
       }
     );
 

@@ -6,6 +6,56 @@ import asyncHandler from 'express-async-handler';
 import { LOAN_STATUS } from '../config/constants.js';
 
 /**
+ * @desc    Corriger les activeLoans négatifs (fonction de maintenance)
+ * @route   POST /api/loans/fix-active-loans
+ * @access  Privé (admin uniquement)
+ */
+const fixActiveLoans = asyncHandler(async (req, res) => {
+  try {
+    console.log('Début de la correction des activeLoans négatifs...');
+    
+    // Trouver tous les patients avec des activeLoans négatifs
+    const patientsWithNegativeLoans = await Patient.find({ 
+      activeLoans: { $lt: 0 } 
+    });
+    
+    console.log(`Trouvé ${patientsWithNegativeLoans.length} patients avec des activeLoans négatifs`);
+    
+    let correctedCount = 0;
+    
+    for (const patient of patientsWithNegativeLoans) {
+      const equipmentCount = Array.isArray(patient.borrowedEquipment) ? patient.borrowedEquipment.length : 0;
+      const correctActiveLoans = Math.max(0, equipmentCount);
+      
+      if (patient.activeLoans !== correctActiveLoans) {
+        console.log(`Correction patient ${patient._id}: ${patient.activeLoans} -> ${correctActiveLoans} (borrowedEquipment: ${equipmentCount})`);
+        
+        patient.activeLoans = correctActiveLoans;
+        await patient.save();
+        correctedCount++;
+      }
+    }
+    
+    console.log(`Correction terminée: ${correctedCount} patients corrigés`);
+    
+    res.json({
+      success: true,
+      message: `${correctedCount} patients ont été corrigés`,
+      correctedCount,
+      totalFound: patientsWithNegativeLoans.length
+    });
+    
+  } catch (error) {
+    console.error('Erreur lors de la correction des activeLoans:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la correction des activeLoans',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
  * @desc    Créer un nouveau prêt d'équipement
  * @route   POST /api/loans
  * @access  Privé
@@ -68,7 +118,7 @@ const createLoan = asyncHandler(async (req, res) => {
 
   // Mettre à jour le patient
   patient.borrowedEquipment.push(equipmentId);
-  patient.activeLoans += 1;
+  // Ne pas manipuler activeLoans manuellement - le middleware du Patient s'en charge
   await patient.save();
 
   res.status(201).json({
@@ -295,8 +345,8 @@ const cancelLoan = asyncHandler(async (req, res) => {
     await Patient.findByIdAndUpdate(
       loan.patient,
       {
-        $pull: { borrowedEquipment: loan.equipment },
-        $inc: { activeLoans: -1 }
+        $pull: { borrowedEquipment: loan.equipment }
+        // Ne pas manipuler activeLoans manuellement - le middleware du Patient s'en charge
       }
     );
 
@@ -476,5 +526,6 @@ export {
   cancelLoan,
   getLoanHistory,
   getLoanStats,
-  deleteLoan
+  deleteLoan,
+  fixActiveLoans
 };
