@@ -41,9 +41,9 @@ export const EQUIPMENT_CONDITION = {
 
 // ==============================|| API CONFIG ||============================== //
 
-const rawApiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const rawApiBaseUrl = import.meta.env.VITE_API_URL || 'https://gestiont2riv-tunisian.onrender.com';
 const normalizedApiBaseUrl = rawApiBaseUrl.trim().replace(/\/+$/, '');
-export const API_URL = normalizedApiBaseUrl.endsWith('/api') ? normalizedApiBaseUrl : `${normalizedApiBaseUrl}/api`;
+export const API_URL = normalizedApiBaseUrl;
 // Alias pour la compatibilité avec le code existant
 export const API_BASE_URL = API_URL;
 
