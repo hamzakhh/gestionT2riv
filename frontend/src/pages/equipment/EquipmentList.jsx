@@ -672,13 +672,13 @@ const EquipmentList = () => {
     setFormData({
       name: item.name,
       category: item.category,
-      type: item.name, // Assuming the 'name' field stores the equipment type
+      type: item.type || item.name, // Use type field if available, fallback to name
       serialNumber: item.serialNumber,
       status: item.status,
       condition: item.condition,
       notes: item.notes,
       entryDate: item.entryDate,
-      assignedUserId: item.assignedUserId || ''
+      assignedUserId: item.assignedUserId?._id || item.assignedUserId || ''
     });
     setOpenEditDialog(true);
   };
@@ -687,11 +687,36 @@ const EquipmentList = () => {
     e.preventDefault();
     try {
       setLoading(true);
+      
+      // Validate required fields before sending
+      if (!formData.name || !formData.category || !formData.type || !formData.serialNumber) {
+        window.alert('Veuillez remplir tous les champs obligatoires (nom, catégorie, type, numéro de série)');
+        return;
+      }
+      
+      console.log('Envoi des données de mise à jour:', formData);
       await equipmentService.update(selectedItem._id, formData);
       await loadEquipment();
       setOpenEditDialog(false);
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'équipement:', error);
+      
+      // Afficher un message d'erreur plus détaillé
+      let errorMessage = 'Une erreur est survenue lors de la mise à jour de l\'équipement.';
+      
+      if (error.response?.status === 400) {
+        if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+          errorMessage = 'Erreur de validation: ' + error.response.data.errors.join(', ');
+        } else {
+          errorMessage = error.response?.data?.message || 'Données invalides';
+        }
+      } else if (error.response?.status === 403) {
+        errorMessage = 'Vous n\'avez pas les autorisations nécessaires pour effectuer cette action.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Équipement introuvable.';
+      }
+      
+      window.alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -1257,6 +1282,18 @@ const EquipmentList = () => {
                 📋 Informations Principales
               </Typography>
               <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Nom de l'équipement"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    variant="outlined"
+                    helperText="Donnez un nom descriptif à l'équipement"
+                  />
+                </Grid>
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth required variant="outlined">
                     <InputLabel>Catégorie</InputLabel>
@@ -1743,6 +1780,16 @@ const EquipmentList = () => {
           <DialogTitle>Modifier l'équipement</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 2 }}>
+              <TextField
+                fullWidth
+                required
+                label="Nom de l'équipement"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                margin="normal"
+                variant="outlined"
+              />
               <FormControl fullWidth required margin="normal">
                 <InputLabel>Catégorie</InputLabel>
                 <Select

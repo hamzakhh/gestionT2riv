@@ -105,9 +105,15 @@ export const createEquipment = async (req, res, next) => {
  */
 export const updateEquipment = async (req, res, next) => {
   try {
+    console.log('=== DÉBUT updateEquipment ===');
+    console.log('ID reçu:', req.params.id);
+    console.log('Body brut:', req.body);
+    console.log('Utilisateur:', req.user);
+    
     const equipment = await Equipment.findById(req.params.id);
 
     if (!equipment) {
+      console.log('Équipement non trouvé');
       return res.status(404).json({
         success: false,
         message: 'Équipement non trouvé',
@@ -119,7 +125,45 @@ export const updateEquipment = async (req, res, next) => {
     delete req.body.maintenanceHistory;
     delete req.body.currentBorrower;
 
+    console.log('Body après nettoyage:', req.body);
+
+    // Validation manuelle des champs requis
+    const requiredFields = ['name', 'category', 'type', 'serialNumber'];
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    
+    if (missingFields.length > 0) {
+      console.error('Champs requis manquants:', missingFields);
+      return res.status(400).json({
+        success: false,
+        message: 'Champs requis manquants',
+        errors: missingFields.map(field => `Le champ ${field} est requis`)
+      });
+    }
+
+    // Validation des enums
+    const validCategories = ['Médical', 'Bureautique'];
+    if (req.body.category && !validCategories.includes(req.body.category)) {
+      console.error('Catégorie invalide:', req.body.category);
+      return res.status(400).json({
+        success: false,
+        message: 'Catégorie invalide',
+        errors: [`La catégorie doit être l'une de: ${validCategories.join(', ')}`]
+      });
+    }
+
     Object.assign(equipment, req.body);
+    
+    // Validation avant sauvegarde
+    const validationError = equipment.validateSync();
+    if (validationError) {
+      console.error('Erreur de validation Mongoose:', validationError);
+      return res.status(400).json({
+        success: false,
+        message: 'Erreur de validation',
+        errors: Object.values(validationError.errors).map(err => err.message)
+      });
+    }
+    
     await equipment.save();
 
     logger.info(`Équipement mis à jour: ${equipment.name} par ${req.user.email}`);
@@ -130,6 +174,18 @@ export const updateEquipment = async (req, res, next) => {
       data: equipment,
     });
   } catch (error) {
+    console.error('Erreur dans updateEquipment:', error);
+    
+    // Gérer les erreurs de duplication
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      return res.status(400).json({
+        success: false,
+        message: `Le champ ${field} existe déjà`,
+        errors: [`${field} doit être unique`]
+      });
+    }
+    
     next(error);
   }
 };
