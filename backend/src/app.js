@@ -1,30 +1,35 @@
-import dotenv from 'dotenv';
-dotenv.config();
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import connectDB from './config/database.js';
-import logger from './utils/logger.js';
-import { errorHandler, notFound } from './middleware/errorHandler.js';
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
+const path = require('path');
+const { fileURLToPath } = require('url');
 
-// Importer les routes
-import authRoutes from './routes/auth.js';
-import equipmentRoutes from './routes/equipment.js';
-import orphanRoutes from './routes/orphans.js';
-import donorRoutes from './routes/donors.js';
-import donationRoutes from './routes/donations.js';
-import volunteerRoutes from './routes/volunteerRoutes.js';
-import userRoutes from './routes/users.js';
-import patientRoutes from './routes/patientRoutes.js';
-import loanRoutes from './routes/loans.js';
-
-// ✅ vrai __dirname
+// ✅ vrai __dirname pour ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// 🔎 Vérification du chemin pour le frontend
+console.log('Backend __dirname:', __dirname);
+console.log('Frontend dist path:', path.join(__dirname, '../frontend/dist/index.html'));
+
+const connectDB = require('./config/database');
+const logger = require('./utils/logger');
+const { errorHandler, notFound } = require('./middleware/errorHandler');
+
+// Importer les routes
+const authRoutes = require('./routes/auth');
+const equipmentRoutes = require('./routes/equipment');
+const orphanRoutes = require('./routes/orphans');
+const donorRoutes = require('./routes/donors');
+const donationRoutes = require('./routes/donations');
+const volunteerRoutes = require('./routes/volunteerRoutes');
+const userRoutes = require('./routes/users');
+const patientRoutes = require('./routes/patientRoutes');
+const loanRoutes = require('./routes/loans');
 
 // Initialiser l'application
 const app = express();
@@ -172,8 +177,6 @@ app.use('/api/v1/patients', patientRoutes);
 // renvoyer le fichier index.html de React (pour le routing côté client)
 // DOIT être placé APRÈS toutes les routes API mais AVANT les middlewares d'erreur
 app.get('*', (req, res) => {
-  // 🔎 Vérification EXPRESS
-  console.log(path.join(__dirname, '../frontend/dist/index.html'));
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
@@ -209,4 +212,4 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-export default app;
+module.exports = app;
