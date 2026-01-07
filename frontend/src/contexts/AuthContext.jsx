@@ -65,9 +65,15 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
+    console.log('🔐 AuthContext.login appelé avec:', email);
     const response = await authService.login(email, password);
+    console.log('📦 Réponse de authService.login:', JSON.stringify(response, null, 2));
+    
     if (response.data && response.data.user) {
+      console.log('✅ Utilisateur défini dans le contexte:', response.data.user);
       setUser(response.data.user);
+    } else {
+      console.log('⚠️ Pas de user dans la réponse');
     }
     return response;
   };

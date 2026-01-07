@@ -113,9 +113,11 @@ export default function AuthLogin({ isDemo = false }) {
             setLoading(true);
             const response = await login(values.email, values.password);
             
-            console.log('📦 Réponse login:', response);
+            console.log('📦 Réponse login complète:', JSON.stringify(response, null, 2));
+            console.log('📦 response.success:', response.success);
+            console.log('📦 response.data:', response.data);
             
-            if (response.success && response.data) {
+            if (response && response.success && response.data) {
               console.log('✅ Connexion réussie!');
               
               setStatus({ success: true });
@@ -123,7 +125,7 @@ export default function AuthLogin({ isDemo = false }) {
             } else {
               console.error('❌ Format de réponse invalide:', response);
               setStatus({ success: false });
-              setErrors({ submit: response.message || 'Échec de connexion' });
+              setErrors({ submit: response?.message || 'Échec de connexion - format de réponse invalide' });
             }
           } catch (err) {
             console.error('❌ Erreur de connexion:', err);
