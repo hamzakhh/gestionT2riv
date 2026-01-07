@@ -8,7 +8,11 @@ const authService = {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
     }
-    return response.data;
+    return {
+      success: response.data.success,
+      user: response.data.data.user,
+      token: response.data.data.token
+    };
   },
 
   // Inscription
@@ -18,7 +22,11 @@ const authService = {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
     }
-    return response.data;
+    return {
+      success: response.data.success,
+      user: response.data.data.user,
+      token: response.data.data.token
+    };
   },
 
   // Déconnexion
