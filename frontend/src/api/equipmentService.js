@@ -55,7 +55,7 @@ const equipmentService = {
   // Récupérer les détails d'un équipement
   getEquipmentById: async (id) => {
     try {
-      const response = await api.get(`/equipments/${id}`);
+      const response = await api.get(`/equipment/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching equipment with id ${id}:`, error);
@@ -66,7 +66,7 @@ const equipmentService = {
   // Mettre à jour l'état d'un équipement
   updateEquipmentStatus: async (id, statusData) => {
     try {
-      const response = await api.patch(`/equipments/${id}/status`, statusData);
+      const response = await api.patch(`/equipment/${id}/status`, statusData);
       return response.data;
     } catch (error) {
       console.error(`Error updating equipment status for id ${id}:`, error);
@@ -88,7 +88,7 @@ const equipmentService = {
   // Mettre à jour un équipement existant
   updateEquipment: async (id, equipmentData) => {
     try {
-      const response = await api.put(`/equipments/${id}`, equipmentData);
+      const response = await api.put(`/equipment/${id}`, equipmentData);
       return response.data;
     } catch (error) {
       console.error(`Error updating equipment with id ${id}:`, error);
@@ -99,7 +99,7 @@ const equipmentService = {
   // Supprimer un équipement
   deleteEquipment: async (id) => {
     try {
-      const response = await api.delete(`/equipments/${id}`);
+      const response = await api.delete(`/equipment/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error deleting equipment with id ${id}:`, error);

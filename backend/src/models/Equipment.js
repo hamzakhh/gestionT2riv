@@ -116,7 +116,7 @@ equipmentSchema.index({ name: 'text', category: 'text', serialNumber: 'text' });
 
 // Méthode pour prêter l'équipement
 equipmentSchema.methods.lend = function(borrowerInfo, userId) {
-  this.status = EQUIPMENT_STATUS.LENT;
+  this.status = EQUIPMENT_STATUS.BORROWED;
   this.currentBorrower = {
     ...borrowerInfo,
     lentDate: new Date(),

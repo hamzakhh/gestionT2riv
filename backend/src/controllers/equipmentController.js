@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Equipment from '../models/Equipment.js';
 import { formatPaginatedResponse, getPaginationParams } from '../utils/helpers.js';
 import { EQUIPMENT_STATUS } from '../config/constants.js';
@@ -167,9 +168,9 @@ export const deleteEquipment = async (req, res, next) => {
 
     // Vérifier si l'équipement est prêté
     console.log('Statut de l\'équipement:', equipment.status);
-    console.log('Valeur de EQUIPMENT_STATUS.LENT:', EQUIPMENT_STATUS.LENT);
+    console.log('Valeur de EQUIPMENT_STATUS.BORROWED:', EQUIPMENT_STATUS.BORROWED);
     
-    if (equipment.status === EQUIPMENT_STATUS.LENT) {
+    if (equipment.status === EQUIPMENT_STATUS.BORROWED) {
       console.log('Tentative de suppression d\'un équipement prêté');
       return res.status(400).json({
         success: false,
@@ -213,7 +214,7 @@ export const lendEquipment = async (req, res, next) => {
       });
     }
 
-    if (equipment.status === EQUIPMENT_STATUS.LENT) {
+    if (equipment.status === EQUIPMENT_STATUS.BORROWED) {
       return res.status(400).json({
         success: false,
         message: 'Équipement déjà prêté',
@@ -260,7 +261,7 @@ export const returnEquipmentItem = async (req, res, next) => {
       });
     }
 
-    if (equipment.status !== EQUIPMENT_STATUS.LENT) {
+    if (equipment.status !== EQUIPMENT_STATUS.BORROWED) {
       return res.status(400).json({
         success: false,
         message: 'Équipement non prêté',
