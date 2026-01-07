@@ -54,7 +54,11 @@ const OrphanList = () => {
     if (!photoPath) return null;
     // If it's already a full URL, return as is
     if (photoPath.startsWith('http')) return photoPath;
-    // If it's a relative path, construct full URL
+    // If it's an upload path, use base URL (not API URL)
+    if (photoPath.includes('uploads/')) {
+      return `${import.meta.env.VITE_BASE_URL}${photoPath.startsWith('/') ? '' : '/'}${photoPath}`;
+    }
+    // For other paths, use API URL
     return `${API_URL}${photoPath.startsWith('/') ? '' : '/'}${photoPath}`;
   };
 

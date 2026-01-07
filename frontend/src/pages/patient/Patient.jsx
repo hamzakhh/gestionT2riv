@@ -309,7 +309,7 @@ const Patient = () => {
       ? patient.files.map((file, index) => (
           <img 
             key={index} 
-            src={`/uploads/${file}`} 
+            src={`${import.meta.env.VITE_BASE_URL}/uploads/${file}`} 
             alt={`Photo ${index + 1}`} 
             style={{ maxWidth: '100px', maxHeight: '100px', margin: '5px' }} 
           />
