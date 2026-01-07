@@ -41,13 +41,12 @@ export const EQUIPMENT_CONDITION = {
 
 // ==============================|| API CONFIG ||============================== //
 
-const rawApiBaseUrl = import.meta.env.VITE_API_URL || 'https://gestiont2riv.onrender.com';
+const rawApiBaseUrl = import.meta.env.VITE_API_URL || 'https://gestiont2riv-tunisian.onrender.com';
 const normalizedApiBaseUrl = rawApiBaseUrl.trim().replace(/\/+$/, '');
 const API_PREFIX = '/api';
 
 // Base API = host + /api (évite les 404 quand le backend est monté sous /api)
 export const API_URL = `${normalizedApiBaseUrl}${API_PREFIX}`;
-console.log('🔗 API_URL configurée:', API_URL);
 // Alias pour la compatibilité avec le code existant
 export const API_BASE_URL = API_URL;
 
