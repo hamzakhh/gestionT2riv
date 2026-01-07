@@ -115,7 +115,7 @@ export default function AuthLogin({ isDemo = false }) {
             
             console.log('📦 Réponse login:', response);
             
-            if (response.success && response.data) {
+            if (response.success && response.user) {
               console.log('✅ Connexion réussie!');
               
               setStatus({ success: true });
