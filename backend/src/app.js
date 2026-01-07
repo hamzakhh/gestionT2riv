@@ -73,8 +73,8 @@ app.use(express.urlencoded({ extended: true }));
 // Servir les fichiers statiques du frontend React
 // Chemin compatible avec Render et local
 const frontendPath = process.env.NODE_ENV === 'production' 
-  ? path.join(__dirname, '../frontend/dist')  // Render: /opt/render/project/src -> /opt/render/project/frontend/dist
-  : path.join(__dirname, '../../frontend/dist'); // Local: backend/src -> frontend/dist
+  ? path.join(__dirname, '../frontend/dist') 
+  : path.join(__dirname, '../frontend/dist');
 
 console.log('Frontend path:', frontendPath);
 console.log('__dirname:', __dirname);
@@ -85,21 +85,6 @@ import fs from 'fs';
 const indexPath = path.join(frontendPath, 'index.html');
 console.log('Index path:', indexPath);
 console.log('Index exists:', fs.existsSync(indexPath));
-
-app.use(express.static(frontendPath));
-
-// Servir les fichiers statiques avec en-têtes CORS
-app.use('/uploads', (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  next();
-}, express.static(path.join(__dirname, 'uploads'), {
-  setHeaders: (res) => {
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-  }
-}));
 
 // Compression
 app.use(compression());
@@ -172,6 +157,22 @@ registerRoutes('/loans', loanRoutes);
 app.use('/api/v1/volunteers', volunteerRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/patients', patientRoutes);
+
+// Servir les fichiers statiques du frontend (APRÈS les routes API)
+app.use(express.static(frontendPath));
+
+// Servir les fichiers uploadés (APRÈS les routes API et frontend)
+app.use('/uploads', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+}, express.static(path.join(__dirname, '../uploads'), {
+  setHeaders: (res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 
 // Catch-all handler: pour toute requête qui ne correspond pas à une route API,
 // renvoyer le fichier index.html de React (pour le routing côté client)
