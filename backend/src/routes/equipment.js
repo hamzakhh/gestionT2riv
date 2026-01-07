@@ -1,17 +1,17 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { protect, authorize, ROLES } = require('../middleware/auth');
-const {
+import { protect, authorize, ROLES } from '../middleware/auth.js';
+import {
   getAllEquipment,
   getEquipmentById,
   createEquipment,
   updateEquipment,
   deleteEquipment,
   lendEquipment,
-  returnEquipment,
+  returnEquipmentItem,
   addMaintenance,
-  getEquipmentStats,
-} = require('../controllers/equipmentController');
+  getEquipmentStats
+} from '../controllers/equipmentController.js';
 
 // Toutes les routes nécessitent une authentification
 router.use(protect);
@@ -46,7 +46,7 @@ router.delete('/:id', authorize(ROLES.ADMIN), deleteEquipment);
 
 // Routes de prêt/retour (accessibles à tous)
 router.post('/:id/lend', lendEquipment);
-router.post('/:id/return', returnEquipment);
+router.post('/:id/return', returnEquipmentItem);
 router.post('/:id/maintenance', addMaintenance);
 
-module.exports = router;
+export default router;

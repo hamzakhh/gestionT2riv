@@ -1,8 +1,8 @@
-const Patient = require('../models/Patient');
-const asyncHandler = require('express-async-handler');
-const { uploadFile, deleteFile } = require('../utils/fileUpload');
-const fs = require('fs');
-const path = require('path');
+import Patient from '../models/Patient.js';
+import asyncHandler from 'express-async-handler';
+import { uploadFile, deleteFile } from '../utils/fileUpload.js';
+import fs from 'fs';
+import path from 'path';
 
 // @desc    Récupérer tous les patients
 // @route   GET /api/patients
@@ -225,7 +225,7 @@ const getPatientStats = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = {
+export {
   getPatients,
   getPatientById,
   createPatient,

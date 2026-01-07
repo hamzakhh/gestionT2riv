@@ -1,8 +1,8 @@
-const Orphan = require('../models/Orphan');
-const { formatPaginatedResponse, getPaginationParams } = require('../utils/helpers');
-const logger = require('../utils/logger');
-const path = require('path');
-const fs = require('fs');
+import Orphan from '../models/Orphan.js';
+import { formatPaginatedResponse, getPaginationParams } from '../utils/helpers.js';
+import logger from '../utils/logger.js';
+import path from 'path';
+import fs from 'fs';
 
 // Fonction utilitaire pour traiter les données de la requête
 const processOrphanData = (req) => {
@@ -33,7 +33,7 @@ const processOrphanData = (req) => {
   return data;
 };
 
-exports.getAllOrphans = async (req, res, next) => {
+export const getAllOrphans = async (req, res, next) => {
   try {
     const { page, limit, status, search } = req.query;
     const { skip, itemsPerPage } = getPaginationParams(page, limit);
@@ -65,7 +65,7 @@ exports.getAllOrphans = async (req, res, next) => {
   }
 };
 
-exports.getOrphanById = async (req, res, next) => {
+export const getOrphanById = async (req, res, next) => {
   try {
     const orphan = await Orphan.findById(req.params.id)
       .populate('sponsorship.sponsor')
@@ -87,7 +87,7 @@ exports.getOrphanById = async (req, res, next) => {
   }
 };
 
-exports.createOrphan = async (req, res, next) => {
+export const createOrphan = async (req, res, next) => {
   try {
     const data = processOrphanData(req);
     data.createdBy = req.user._id;
@@ -113,7 +113,7 @@ exports.createOrphan = async (req, res, next) => {
   }
 };
 
-exports.updateOrphan = async (req, res, next) => {
+export const updateOrphan = async (req, res, next) => {
   try {
     const data = processOrphanData(req);
     const orphan = await Orphan.findById(req.params.id);
@@ -166,7 +166,7 @@ exports.updateOrphan = async (req, res, next) => {
   }
 };
 
-exports.deleteOrphan = async (req, res, next) => {
+export const deleteOrphan = async (req, res, next) => {
   try {
     const orphan = await Orphan.findById(req.params.id);
 
@@ -199,7 +199,7 @@ exports.deleteOrphan = async (req, res, next) => {
   }
 };
 
-exports.sponsorOrphan = async (req, res, next) => {
+export const sponsorOrphan = async (req, res, next) => {
   try {
     const { sponsor, monthlyAmount, startDate } = req.body;
 
@@ -233,7 +233,7 @@ exports.sponsorOrphan = async (req, res, next) => {
   }
 };
 
-exports.getOrphanStats = async (req, res, next) => {
+export const getOrphanStats = async (req, res, next) => {
   try {
     const total = await Orphan.countDocuments();
     const sponsored = await Orphan.countDocuments({ 'sponsorship.isSponsored': true });

@@ -1,6 +1,6 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const { ROLES } = require('../config/constants');
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
+import { ROLES } from '../config/constants.js';
 
 /**
  * Middleware pour vérifier le token JWT
@@ -119,7 +119,7 @@ const optionalAuth = async (req, res, next) => {
   next();
 };
 
-module.exports = {
+export {
   protect,
   authorize,
   optionalAuth,

@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const multer = require('multer');
+import fs from 'fs';
+import path from 'path';
+import multer from 'multer';
 
 // Configuration de stockage pour multer
 const storage = multer.diskStorage({
@@ -65,7 +65,7 @@ const deleteFile = (filePath) => {
   });
 };
 
-module.exports = {
+export {
   uploadFile,
   deleteFile,
   upload

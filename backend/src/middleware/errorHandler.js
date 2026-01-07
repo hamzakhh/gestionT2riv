@@ -1,4 +1,4 @@
-const logger = require('../utils/logger');
+import logger from '../utils/logger.js';
 
 /**
  * Middleware de gestion des erreurs
@@ -74,7 +74,7 @@ const notFound = (req, res, next) => {
   next(error);
 };
 
-module.exports = {
+export {
   errorHandler,
   notFound,
 };

@@ -114,7 +114,7 @@ const calculateStats = (values) => {
   };
 };
 
-module.exports = {
+export {
   generateReceiptNumber,
   calculateAge,
   formatCurrency,

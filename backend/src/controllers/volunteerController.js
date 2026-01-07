@@ -1,8 +1,8 @@
-const Volunteer = require('../models/Volunteer');
-const asyncHandler = require('express-async-handler');
-const { uploadFile, deleteFile } = require('../utils/fileUpload');
-const fs = require('fs');
-const path = require('path');
+import Volunteer from '../models/Volunteer.js';
+import asyncHandler from 'express-async-handler';
+import { uploadFile, deleteFile } from '../utils/fileUpload.js';
+import fs from 'fs';
+import path from 'path';
 
 // @desc    Récupérer tous les bénévoles
 // @route   GET /api/volunteers
@@ -266,7 +266,7 @@ const getVolunteerStats = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = {
+export {
   getVolunteers,
   getVolunteerById,
   createVolunteer,

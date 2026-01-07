@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { DONATION_CATEGORY, PAYMENT_TYPE } = require('../config/constants');
+import mongoose from 'mongoose';
+import { DONATION_CATEGORY, PAYMENT_TYPE } from '../config/constants.js';
 
 const donationSchema = new mongoose.Schema({
   donor: {
@@ -92,4 +92,4 @@ donationSchema.post('findOneAndDelete', async function(doc) {
   }
 });
 
-module.exports = mongoose.model('Donation', donationSchema);
+export default mongoose.model('Donation', donationSchema);
