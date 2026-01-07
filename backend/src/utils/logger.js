@@ -1,9 +1,5 @@
-import winston from 'winston';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const winston = require('winston');
+const path = require('path');
 
 const logDir = 'logs';
 
@@ -46,4 +42,4 @@ if (process.env.NODE_ENV !== 'production') {
   );
 }
 
-export default logger;
+module.exports = logger;

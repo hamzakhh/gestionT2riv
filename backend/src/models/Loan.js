@@ -1,6 +1,6 @@
-import mongoose from 'mongoose';
-import mongoosePaginate from 'mongoose-paginate-v2';
-import { LOAN_STATUS } from '../config/constants.js';
+const mongoose = require('mongoose');
+const mongoosePaginate = require('mongoose-paginate-v2');
+const { LOAN_STATUS } = require('../config/constants');
 
 const loanSchema = new mongoose.Schema({
   equipment: {
@@ -164,4 +164,4 @@ loanSchema.methods.markAsReturned = async function(conditionAfter, notes, userId
 loanSchema.plugin(mongoosePaginate);
 
 const Loan = mongoose.model('Loan', loanSchema);
-export default Loan;
+module.exports = Loan;

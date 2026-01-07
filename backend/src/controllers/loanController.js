@@ -1,9 +1,9 @@
-import mongoose from 'mongoose';
-import Loan from '../models/Loan.js';
-import Equipment from '../models/Equipment.js';
-import Patient from '../models/Patient.js';
-import asyncHandler from 'express-async-handler';
-import { LOAN_STATUS } from '../config/constants.js';
+const mongoose = require('mongoose');
+const Loan = require('../models/Loan');
+const Equipment = require('../models/Equipment');
+const Patient = require('../models/Patient');
+const asyncHandler = require('express-async-handler');
+const { LOAN_STATUS } = require('../config/constants');
 
 /**
  * @desc    Créer un nouveau prêt d'équipement
@@ -468,7 +468,7 @@ const getLoanStats = asyncHandler(async (req, res) => {
   });
 });
 
-export default {
+module.exports = {
   createLoan,
   returnEquipment,
   getLoanDetails,

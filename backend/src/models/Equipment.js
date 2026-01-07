@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-import { EQUIPMENT_STATUS, EQUIPMENT_CONDITION } from '../config/constants.js';
+const mongoose = require('mongoose');
+const { EQUIPMENT_STATUS, EQUIPMENT_CONDITION } = require('../config/constants');
 
 const equipmentSchema = new mongoose.Schema({
   name: {
@@ -146,4 +146,4 @@ equipmentSchema.methods.return = function(condition, notes, userId) {
   this.currentBorrower = undefined;
 };
 
-export default mongoose.model('Equipment', equipmentSchema);
+module.exports = mongoose.model('Equipment', equipmentSchema);

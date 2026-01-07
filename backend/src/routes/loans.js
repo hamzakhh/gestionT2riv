@@ -1,8 +1,9 @@
-import express from 'express';
-import loanController from '../controllers/loanController.js';
-import { protect, authorize } from '../middleware/auth.js';
-
+const express = require('express');
 const router = express.Router({ mergeParams: true });
+const loanController = require('../controllers/loanController');
+const { protect, authorize } = require('../middleware/auth');
+
+// Routes protégées - nécessitent une authentification
 router.use(protect);
 
 // 1. Définir d'abord toutes les routes spécifiques
@@ -31,4 +32,4 @@ router.delete('/:id', authorize('admin', 'medical'), loanController.deleteLoan);
 router.route('/:id')
   .get(loanController.getLoanDetails);
 
-export default router;
+module.exports = router;

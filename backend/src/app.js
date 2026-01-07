@@ -1,37 +1,27 @@
-import dotenv from 'dotenv';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import compression from 'compression';
-import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
-import path from 'path';
-import { fileURLToPath } from 'url';
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
+const path = require('path');
+const __dirname = path.resolve();
 
-dotenv.config();
-
-// ✅ vrai __dirname pour ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// 🔎 Vérification du chemin pour le frontend
-console.log('Backend __dirname:', __dirname);
-console.log('Frontend dist path:', path.join(__dirname, '../frontend/dist/index.html'));
-
-import connectDB from './config/database.js';
-import logger from './utils/logger.js';
-import { errorHandler, notFound } from './middleware/errorHandler.js';
+const connectDB = require('./config/database');
+const logger = require('./utils/logger');
+const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 // Importer les routes
-import authRoutes from './routes/auth.js';
-import equipmentRoutes from './routes/equipment.js';
-import orphanRoutes from './routes/orphans.js';
-import donorRoutes from './routes/donors.js';
-import donationRoutes from './routes/donations.js';
-// import volunteerRoutes from './routes/volunteerRoutes.js';
-import userRoutes from './routes/users.js';
-// import patientRoutes from './routes/patientRoutes.js';
-import loanRoutes from './routes/loans.js';
+const authRoutes = require('./routes/auth');
+const equipmentRoutes = require('./routes/equipment');
+const orphanRoutes = require('./routes/orphans');
+const donorRoutes = require('./routes/donors');
+const donationRoutes = require('./routes/donations');
+const volunteerRoutes = require('./routes/volunteerRoutes');
+const userRoutes = require('./routes/users');
+const patientRoutes = require('./routes/patientRoutes');
+const loanRoutes = require('./routes/loans');
 
 // Initialiser l'application
 const app = express();
@@ -88,7 +78,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Servir les fichiers statiques du frontend React
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
+app.use(express.static(path.join(__dirname, 'frontend/dist')));
 
 // Servir les fichiers statiques avec en-têtes CORS
 app.use('/uploads', (req, res, next) => {
@@ -163,23 +153,23 @@ const registerRoutes = (path, router) => {
 // Register all API routes with both /api/... and /... prefixes
 registerRoutes('/auth', authRoutes);
 registerRoutes('/users', userRoutes);
-// registerRoutes('/volunteers', volunteerRoutes);
-// registerRoutes('/patients', patientRoutes);
+registerRoutes('/volunteers', volunteerRoutes);
+registerRoutes('/patients', patientRoutes);
 registerRoutes('/equipment', equipmentRoutes);
 registerRoutes('/orphans', orphanRoutes);
 registerRoutes('/donors', donorRoutes);
 registerRoutes('/donations', donationRoutes);
 registerRoutes('/loans', loanRoutes);
 // Keep v1 routes as they are for backward compatibility
-// app.use('/api/v1/volunteers', volunteerRoutes);
+app.use('/api/v1/volunteers', volunteerRoutes);
 app.use('/api/v1/users', userRoutes);
-// app.use('/api/v1/patients', patientRoutes);
+app.use('/api/v1/patients', patientRoutes);
 
 // Catch-all handler: pour toute requête qui ne correspond pas à une route API,
 // renvoyer le fichier index.html de React (pour le routing côté client)
 // DOIT être placé APRÈS toutes les routes API mais AVANT les middlewares d'erreur
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+  res.sendFile(path.join(__dirname, 'frontend/dist/index.html'));
 });
 
 // Gestion des erreurs (DOIT être à la fin)
@@ -214,4 +204,4 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-export default app;
+module.exports = app;

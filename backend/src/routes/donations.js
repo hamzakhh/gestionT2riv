@@ -1,6 +1,7 @@
-import express from 'express';
-import { protect, authorize, ROLES } from '../middleware/auth.js';
-import {
+const express = require('express');
+const router = express.Router();
+const { protect, authorize, ROLES } = require('../middleware/auth');
+const {
   getAllDonations,
   getDonationById,
   createDonation,
@@ -8,9 +9,7 @@ import {
   deleteDonation,
   getDonationStats,
   getDonationReport,
-} from '../controllers/donationController.js';
-
-const router = express.Router();
+} = require('../controllers/donationController');
 
 router.use(protect);
 
@@ -22,4 +21,4 @@ router.post('/', authorize(ROLES.ADMIN, ROLES.MANAGER), createDonation);
 router.put('/:id', authorize(ROLES.ADMIN, ROLES.MANAGER), updateDonation);
 router.delete('/:id', authorize(ROLES.ADMIN), deleteDonation);
 
-export default router;
+module.exports = router;

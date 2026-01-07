@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-import { ORPHAN_STATUS } from '../config/constants.js';
+const mongoose = require('mongoose');
+const { ORPHAN_STATUS } = require('../config/constants');
 
 const orphanSchema = new mongoose.Schema({
   firstName: {
@@ -120,4 +120,4 @@ orphanSchema.virtual('fullName').get(function() {
 orphanSchema.set('toJSON', { virtuals: true });
 orphanSchema.set('toObject', { virtuals: true });
 
-export default mongoose.model('Orphan', orphanSchema);
+module.exports = mongoose.model('Orphan', orphanSchema);

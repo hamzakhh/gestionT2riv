@@ -1,11 +1,7 @@
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
 
 // Fonction pour créer un middleware de téléchargement personnalisé
 const createUploader = (folder, prefix = 'file') => {
@@ -49,12 +45,8 @@ const createUploader = (folder, prefix = 'file') => {
 };
 
 // Export des uploaders pour différents types de fichiers
-const uploadOrphanPhoto = createUploader('orphans', 'orphan');
-const uploadVolunteerPhoto = createUploader('volunteers', 'volunteer');
-const uploadPatientPhotos = createUploader('patients', 'patient');
-
-export {
-  uploadOrphanPhoto,
-  uploadVolunteerPhoto,
-  uploadPatientPhotos
+module.exports = {
+  uploadOrphanPhoto: createUploader('orphans', 'orphan'),
+  uploadVolunteerPhoto: createUploader('volunteers', 'volunteer'),
+  uploadPatientPhotos: createUploader('patients', 'patient')
 };

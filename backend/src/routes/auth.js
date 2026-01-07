@@ -1,17 +1,16 @@
-import express from 'express';
-import { body } from 'express-validator';
-import validate from '../middleware/validator.js';
-import { protect } from '../middleware/auth.js';
-import {
+const express = require('express');
+const router = express.Router();
+const { body } = require('express-validator');
+const validate = require('../middleware/validator');
+const { protect } = require('../middleware/auth');
+const {
   register,
   login,
   getProfile,
   updateProfile,
   changePassword,
   logout,
-} from '../controllers/authController.js';
-
-const router = express.Router();
+} = require('../controllers/authController');
 
 // Validation des données d'inscription
 const registerValidation = [
@@ -40,4 +39,4 @@ router.put('/profile', protect, updateProfile);
 router.post('/change-password', protect, changePassword);
 router.post('/logout', protect, logout);
 
-export default router;
+module.exports = router;

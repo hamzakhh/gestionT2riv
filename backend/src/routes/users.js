@@ -1,26 +1,25 @@
-import express from 'express';
-import { getAllUsers, createUser, getUser, updateUser, deleteUser } from '../controllers/userController.js';
-import { protect } from '../middleware/auth.js';
-import { restrictTo } from '../controllers/authController.js';
-import { ROLES } from '../config/constants.js';
+const express = require('express');
+const userController = require('../controllers/userController');
+const authController = require('../controllers/authController');
+const { ROLES } = require('../config/constants');
 
 const router = express.Router();
 
 // Protéger toutes les routes après ce middleware (nécessite d'être connecté)
-router.use(protect);
+router.use(authController.protect);
 
 // Restreindre l'accès aux administrateurs uniquement
-router.use(restrictTo(ROLES.ADMIN));
+router.use(authController.restrictTo(ROLES.ADMIN));
 
 router
   .route('/')
-  .get(getAllUsers)
-  .post(createUser);
+  .get(userController.getAllUsers)
+  .post(userController.createUser);
 
 router
   .route('/:id')
-  .get(getUser)
-  .patch(updateUser)
-  .delete(deleteUser);
+  .get(userController.getUser)
+  .patch(userController.updateUser)
+  .delete(userController.deleteUser);
 
-export default router;
+module.exports = router;

@@ -1,15 +1,14 @@
-import mongoose from 'mongoose';
-import Equipment from '../models/Equipment.js';
-import { formatPaginatedResponse, getPaginationParams } from '../utils/helpers.js';
-import { EQUIPMENT_STATUS } from '../config/constants.js';
-import logger from '../utils/logger.js';
+const Equipment = require('../models/Equipment');
+const { formatPaginatedResponse, getPaginationParams } = require('../utils/helpers');
+const { EQUIPMENT_STATUS } = require('../config/constants');
+const logger = require('../utils/logger');
 
 /**
  * @desc    Obtenir tous les équipements
  * @route   GET /api/equipment
  * @access  Private
  */
-export const getAllEquipment = async (req, res, next) => {
+exports.getAllEquipment = async (req, res, next) => {
   try {
     const { page, limit, status, category, search } = req.query;
     const { skip, itemsPerPage } = getPaginationParams(page, limit);
@@ -51,7 +50,7 @@ export const getAllEquipment = async (req, res, next) => {
  * @route   GET /api/equipment/:id
  * @access  Private
  */
-export const getEquipmentById = async (req, res, next) => {
+exports.getEquipmentById = async (req, res, next) => {
   try {
     const equipment = await Equipment.findById(req.params.id)
       .populate('createdBy', 'firstName lastName')
@@ -80,7 +79,7 @@ export const getEquipmentById = async (req, res, next) => {
  * @route   POST /api/equipment
  * @access  Private (Admin/Manager)
  */
-export const createEquipment = async (req, res, next) => {
+exports.createEquipment = async (req, res, next) => {
   try {
     req.body.createdBy = req.user._id;
 
@@ -103,7 +102,7 @@ export const createEquipment = async (req, res, next) => {
  * @route   PUT /api/equipment/:id
  * @access  Private (Admin/Manager)
  */
-export const updateEquipment = async (req, res, next) => {
+exports.updateEquipment = async (req, res, next) => {
   try {
     const equipment = await Equipment.findById(req.params.id);
 
@@ -139,7 +138,7 @@ export const updateEquipment = async (req, res, next) => {
  * @route   DELETE /api/equipment/:id
  * @access  Private (Admin)
  */
-export const deleteEquipment = async (req, res, next) => {
+exports.deleteEquipment = async (req, res, next) => {
   try {
     console.log('=== DÉBUT deleteEquipment ===');
     console.log('Headers de la requête:', req.headers);
@@ -147,7 +146,7 @@ export const deleteEquipment = async (req, res, next) => {
     console.log('ID reçu:', req.params.id);
     
     // Vérifier si l'ID est valide
-    if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!req.params.id || !require('mongoose').Types.ObjectId.isValid(req.params.id)) {
       console.error('ID invalide:', req.params.id);
       return res.status(400).json({
         success: false,
@@ -203,7 +202,7 @@ export const deleteEquipment = async (req, res, next) => {
  * @route   POST /api/equipment/:id/lend
  * @access  Private
  */
-export const lendEquipment = async (req, res, next) => {
+exports.lendEquipment = async (req, res, next) => {
   try {
     const equipment = await Equipment.findById(req.params.id);
 
@@ -250,7 +249,7 @@ export const lendEquipment = async (req, res, next) => {
  * @route   POST /api/equipment/:id/return
  * @access  Private
  */
-export const returnEquipment = async (req, res, next) => {
+exports.returnEquipment = async (req, res, next) => {
   try {
     const equipment = await Equipment.findById(req.params.id);
 
@@ -290,7 +289,7 @@ export const returnEquipment = async (req, res, next) => {
  * @route   POST /api/equipment/:id/maintenance
  * @access  Private
  */
-export const addMaintenance = async (req, res, next) => {
+exports.addMaintenance = async (req, res, next) => {
   try {
     const equipment = await Equipment.findById(req.params.id);
 
@@ -330,7 +329,7 @@ export const addMaintenance = async (req, res, next) => {
  * @route   GET /api/equipment/stats
  * @access  Private
  */
-export const getEquipmentStats = async (req, res, next) => {
+exports.getEquipmentStats = async (req, res, next) => {
   try {
     const stats = await Equipment.aggregate([
       {

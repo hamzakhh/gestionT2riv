@@ -1,8 +1,8 @@
-import Donation from '../models/Donation.js';
-import { formatPaginatedResponse, getPaginationParams, generateReceiptNumber } from '../utils/helpers.js';
-import logger from '../utils/logger.js';
+const Donation = require('../models/Donation');
+const { formatPaginatedResponse, getPaginationParams, generateReceiptNumber } = require('../utils/helpers');
+const logger = require('../utils/logger');
 
-export const getAllDonations = async (req, res, next) => {
+exports.getAllDonations = async (req, res, next) => {
   try {
     const { page, limit, category, type, startDate, endDate } = req.query;
     const { skip, itemsPerPage } = getPaginationParams(page, limit);
@@ -34,7 +34,7 @@ export const getAllDonations = async (req, res, next) => {
   }
 };
 
-export const getDonationById = async (req, res, next) => {
+exports.getDonationById = async (req, res, next) => {
   try {
     const donation = await Donation.findById(req.params.id)
       .populate('donor')
@@ -56,7 +56,7 @@ export const getDonationById = async (req, res, next) => {
   }
 };
 
-export const createDonation = async (req, res, next) => {
+exports.createDonation = async (req, res, next) => {
   try {
     req.body.createdBy = req.user._id;
     
@@ -80,7 +80,7 @@ export const createDonation = async (req, res, next) => {
   }
 };
 
-export const updateDonation = async (req, res, next) => {
+exports.updateDonation = async (req, res, next) => {
   try {
     const donation = await Donation.findByIdAndUpdate(
       req.params.id,
@@ -107,7 +107,7 @@ export const updateDonation = async (req, res, next) => {
   }
 };
 
-export const deleteDonation = async (req, res, next) => {
+exports.deleteDonation = async (req, res, next) => {
   try {
     const donation = await Donation.findByIdAndDelete(req.params.id);
 
@@ -129,7 +129,7 @@ export const deleteDonation = async (req, res, next) => {
   }
 };
 
-export const getDonationStats = async (req, res, next) => {
+exports.getDonationStats = async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query;
     
@@ -187,7 +187,7 @@ export const getDonationStats = async (req, res, next) => {
   }
 };
 
-export const getDonationReport = async (req, res, next) => {
+exports.getDonationReport = async (req, res, next) => {
   try {
     const { year, month } = req.query;
 

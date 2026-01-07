@@ -1,7 +1,7 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
-import logger from '../utils/logger.js';
-import AppError from '../utils/AppError.js';
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const logger = require('../utils/logger');
+const AppError = require('../utils/AppError');
 
 /**
  * Générer un token JWT
@@ -13,7 +13,7 @@ const generateToken = (id) => {
 };
 
 // Protéger les routes - vérifie si l'utilisateur est authentifié
-export const protect = async (req, res, next) => {
+exports.protect = async (req, res, next) => {
   try {
     // 1) Récupérer le token et vérifier s'il existe
     let token;
@@ -57,7 +57,7 @@ export const protect = async (req, res, next) => {
 };
 
 // Restreindre l'accès en fonction des rôles
-export const restrictTo = (...roles) => {
+exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     // roles est un tableau ['admin', 'manager', etc.]
     if (!roles.includes(req.user.role)) {
@@ -74,7 +74,7 @@ export const restrictTo = (...roles) => {
  * @route   POST /api/auth/register
  * @access  Public (ou Admin uniquement selon les besoins)
  */
-export const register = async (req, res, next) => {
+exports.register = async (req, res, next) => {
   try {
     const { username, email, password, firstName, lastName, role, phone } = req.body;
 
@@ -120,7 +120,7 @@ export const register = async (req, res, next) => {
  * @route   POST /api/auth/login
  * @access  Public
  */
-export const login = async (req, res, next) => {
+exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -195,7 +195,7 @@ export const login = async (req, res, next) => {
  * @route   GET /api/auth/profile
  * @access  Private
  */
-export const getProfile = async (req, res, next) => {
+exports.getProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
 
@@ -225,7 +225,7 @@ export const getProfile = async (req, res, next) => {
  * @route   PUT /api/auth/profile
  * @access  Private
  */
-export const updateProfile = async (req, res, next) => {
+exports.updateProfile = async (req, res, next) => {
   try {
     const { firstName, lastName, phone } = req.body;
 
@@ -266,7 +266,7 @@ export const updateProfile = async (req, res, next) => {
  * @route   POST /api/auth/change-password
  * @access  Private
  */
-export const changePassword = async (req, res, next) => {
+exports.changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
@@ -309,7 +309,7 @@ export const changePassword = async (req, res, next) => {
  * @route   POST /api/auth/logout
  * @access  Private
  */
-export const logout = async (req, res, next) => {
+exports.logout = async (req, res, next) => {
   try {
     logger.info(`Déconnexion: ${req.user.email}`);
 
