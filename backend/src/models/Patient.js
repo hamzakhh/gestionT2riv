@@ -113,12 +113,27 @@ patientSchema.plugin(mongoosePaginate);
 
 // Middleware pour mettre à jour les statistiques des prêts
 patientSchema.pre('save', function(next) {
+  // Corriger activeLoans négatif avant toute validation
+  if (this.activeLoans < 0) {
+    console.log(`Correction automatique: activeLoans était ${this.activeLoans}, mise à 0`);
+    this.activeLoans = 0;
+  }
+  
   if (this.isModified('borrowedEquipment')) {
     // S'assurer que borrowedEquipment est un tableau
     const equipmentCount = Array.isArray(this.borrowedEquipment) ? this.borrowedEquipment.length : 0;
     // S'assurer que activeLoans n'est jamais négatif
     this.activeLoans = Math.max(0, equipmentCount);
     console.log(`Patient ${this._id}: activeLoans mis à jour à ${this.activeLoans} (borrowedEquipment: ${equipmentCount})`);
+  }
+  next();
+});
+
+// Middleware de validation pour corriger les valeurs négatives
+patientSchema.pre('validate', function(next) {
+  if (this.activeLoans < 0) {
+    console.log(`Correction dans pre-validate: activeLoans était ${this.activeLoans}, mise à 0`);
+    this.activeLoans = 0;
   }
   next();
 });

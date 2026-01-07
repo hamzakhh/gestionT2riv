@@ -30,8 +30,11 @@ const fixActiveLoans = asyncHandler(async (req, res) => {
       if (patient.activeLoans !== correctActiveLoans) {
         console.log(`Correction patient ${patient._id}: ${patient.activeLoans} -> ${correctActiveLoans} (borrowedEquipment: ${equipmentCount})`);
         
-        patient.activeLoans = correctActiveLoans;
-        await patient.save();
+        // Utiliser updateOne pour contourner les validations
+        await Patient.updateOne(
+          { _id: patient._id },
+          { $set: { activeLoans: correctActiveLoans } }
+        );
         correctedCount++;
       }
     }
@@ -50,6 +53,38 @@ const fixActiveLoans = asyncHandler(async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la correction des activeLoans',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
+ * @desc    Correction automatique au démarrage (si nécessaire)
+ * @access  Privé (admin uniquement)
+ */
+const emergencyFix = asyncHandler(async (req, res) => {
+  try {
+    console.log('Correction d\'urgence des activeLoans négatifs...');
+    
+    // Utiliser updateMany pour corriger tous les patients en une seule fois
+    const result = await Patient.updateMany(
+      { activeLoans: { $lt: 0 } },
+      { $set: { activeLoans: 0 } }
+    );
+    
+    console.log(`Correction d'urgence: ${result.modifiedCount} patients corrigés`);
+    
+    res.json({
+      success: true,
+      message: `Correction d'urgence terminée: ${result.modifiedCount} patients corrigés`,
+      correctedCount: result.modifiedCount
+    });
+    
+  } catch (error) {
+    console.error('Erreur lors de la correction d\'urgence:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la correction d\'urgence',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
@@ -81,6 +116,13 @@ const createLoan = asyncHandler(async (req, res) => {
   if (!patient) {
     res.status(404);
     throw new Error('Patient non trouvé');
+  }
+
+  // Corriger les activeLoans négatifs avant de continuer
+  if (patient.activeLoans < 0) {
+    console.log(`Correction du patient ${patientId}: activeLoans était ${patient.activeLoans}, mise à 0`);
+    patient.activeLoans = 0;
+    await patient.save();
   }
 
   // Créer le prêt
@@ -527,5 +569,6 @@ export {
   getLoanHistory,
   getLoanStats,
   deleteLoan,
-  fixActiveLoans
+  fixActiveLoans,
+  emergencyFix
 };

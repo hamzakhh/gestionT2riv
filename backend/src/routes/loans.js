@@ -9,7 +9,8 @@ import {
   getLoanHistory,
   getLoanStats,
   deleteLoan,
-  fixActiveLoans
+  fixActiveLoans,
+  emergencyFix
 } from '../controllers/loanController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
@@ -31,6 +32,9 @@ router.post('/', authorize('admin', 'medical'), createLoan);
 
 // 1.5 Route pour corriger les activeLoans négatifs (maintenance)
 router.post('/fix-active-loans', authorize('admin'), fixActiveLoans);
+
+// 1.6 Route pour correction d'urgence (admin uniquement)
+router.post('/emergency-fix', authorize('admin'), emergencyFix);
 
 // 2. Définir ensuite les routes avec paramètres
 // 2.1 Route pour retourner un équipement
