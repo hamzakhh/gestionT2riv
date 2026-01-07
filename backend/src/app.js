@@ -70,22 +70,6 @@ app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servir les fichiers statiques du frontend React
-// Chemin compatible avec Render et local
-const frontendPath = process.env.NODE_ENV === 'production' 
-  ? path.join(__dirname, '../frontend/dist') 
-  : path.join(__dirname, '../frontend/dist');
-
-console.log('Frontend path:', frontendPath);
-console.log('__dirname:', __dirname);
-console.log('NODE_ENV:', process.env.NODE_ENV);
-
-// Vérifier si le fichier index.html existe avant de servir
-import fs from 'fs';
-const indexPath = path.join(frontendPath, 'index.html');
-console.log('Index path:', indexPath);
-console.log('Index exists:', fs.existsSync(indexPath));
-
 // Compression
 app.use(compression());
 
@@ -158,10 +142,7 @@ app.use('/api/v1/volunteers', volunteerRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/patients', patientRoutes);
 
-// Servir les fichiers statiques du frontend (APRÈS les routes API)
-app.use(express.static(frontendPath));
-
-// Servir les fichiers uploadés (APRÈS les routes API et frontend)
+// Servir les fichiers uploadés (API ONLY)
 app.use('/uploads', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Methods', 'GET');
@@ -174,11 +155,24 @@ app.use('/uploads', (req, res, next) => {
   }
 }));
 
-// Catch-all handler: pour toute requête qui ne correspond pas à une route API,
-// renvoyer le fichier index.html de React (pour le routing côté client)
-// DOIT être placé APRÈS toutes les routes API mais AVANT les middlewares d'erreur
-app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'));
+// API Info endpoint
+app.get('/api', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API Association Creative - Backend Only',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      equipment: '/api/equipment',
+      orphans: '/api/orphans',
+      donors: '/api/donors',
+      donations: '/api/donations',
+      patients: '/api/patients',
+      users: '/api/users',
+      loans: '/api/loans',
+      volunteers: '/api/volunteers',
+    },
+  });
 });
 
 // Gestion des erreurs (DOIT être à la fin)
