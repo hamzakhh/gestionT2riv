@@ -8,8 +8,6 @@ const axiosInstance = axios.create({
   }
 });
 
-console.log('🌐 AXIOS BASE URL =', axiosInstance.defaults.baseURL);
-
 // Intercepteur pour ajouter le token à chaque requête
 axiosInstance.interceptors.request.use(
   (config) => {
