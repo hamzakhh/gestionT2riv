@@ -88,8 +88,18 @@ app.use(express.urlencoded({ extended: true }));
 // Servir les fichiers statiques du frontend React
 // Chemin compatible avec Render et local
 const frontendPath = process.env.NODE_ENV === 'production' 
-  ? path.join(__dirname, '../frontend/dist')  // Render: backend/src -> frontend/dist
+  ? path.join(__dirname, '../frontend/dist')  // Render: /opt/render/project/src -> /opt/render/project/frontend/dist
   : path.join(__dirname, '../../frontend/dist'); // Local: backend/src -> frontend/dist
+
+console.log('Frontend path:', frontendPath);
+console.log('__dirname:', __dirname);
+console.log('NODE_ENV:', process.env.NODE_ENV);
+
+// Vérifier si le fichier index.html existe avant de servir
+import fs from 'fs';
+const indexPath = path.join(frontendPath, 'index.html');
+console.log('Index path:', indexPath);
+console.log('Index exists:', fs.existsSync(indexPath));
 
 app.use(express.static(frontendPath));
 
