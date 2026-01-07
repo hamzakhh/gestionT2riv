@@ -3,12 +3,22 @@ import axios from 'utils/axios';
 const authService = {
   // Connexion
   login: async (email, password) => {
+    console.log('🔐 authService.login appelé avec:', email);
     const response = await axios.post('/auth/login', { email, password });
-    if (response.data.success && response.data.data) {
+    console.log('📦 Axios response complète:', response);
+    console.log('📦 response.data:', response.data);
+    console.log('📦 response.status:', response.status);
+    
+    if (response.data && response.data.success && response.data.data) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
+    } else {
+      console.log('⚠️ Condition response.data.success && response.data.data non remplie');
     }
-    return response.data;
+    
+    const result = response.data;
+    console.log('📦 authService.login retourne:', result);
+    return result;
   },
 
   // Inscription
