@@ -27,7 +27,7 @@ const equipmentService = {
   getAvailableEquipment: async () => {
     try {
       console.log('Fetching available equipment...');
-      const response = await api.get('/equipment/available');
+      const response = await api.get('/api/equipment/available');
       console.log('Available equipment response:', response);
       
       // Vérifier si la réponse contient des données
@@ -55,7 +55,7 @@ const equipmentService = {
   // Récupérer les détails d'un équipement
   getEquipmentById: async (id) => {
     try {
-      const response = await api.get(`/equipment/${id}`);
+      const response = await api.get(`/api/equipment/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching equipment with id ${id}:`, error);
@@ -66,7 +66,7 @@ const equipmentService = {
   // Mettre à jour l'état d'un équipement
   updateEquipmentStatus: async (id, statusData) => {
     try {
-      const response = await api.patch(`/equipment/${id}/status`, statusData);
+      const response = await api.patch(`/api/equipment/${id}/status`, statusData);
       return response.data;
     } catch (error) {
       console.error(`Error updating equipment status for id ${id}:`, error);
@@ -77,7 +77,7 @@ const equipmentService = {
   // Ajouter un nouvel équipement
   addEquipment: async (equipmentData) => {
     try {
-      const response = await api.post('/', equipmentData);
+      const response = await api.post('/api/equipment', equipmentData);
       return response.data;
     } catch (error) {
       console.error('Error adding equipment:', error);
@@ -88,7 +88,7 @@ const equipmentService = {
   // Mettre à jour un équipement existant
   updateEquipment: async (id, equipmentData) => {
     try {
-      const response = await api.put(`/equipment/${id}`, equipmentData);
+      const response = await api.put(`/api/equipment/${id}`, equipmentData);
       return response.data;
     } catch (error) {
       console.error(`Error updating equipment with id ${id}:`, error);
@@ -99,7 +99,7 @@ const equipmentService = {
   // Supprimer un équipement
   deleteEquipment: async (id) => {
     try {
-      const response = await api.delete(`/equipment/${id}`);
+      const response = await api.delete(`/api/equipment/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error deleting equipment with id ${id}:`, error);

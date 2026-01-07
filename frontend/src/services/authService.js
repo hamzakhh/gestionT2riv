@@ -3,7 +3,7 @@ import axios from 'utils/axios';
 const authService = {
   // Connexion
   login: async (email, password) => {
-    const response = await axios.post('/auth/login', { email, password });
+    const response = await axios.post('/api/auth/login', { email, password });
     if (response.data.success) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
@@ -13,7 +13,7 @@ const authService = {
 
   // Inscription
   register: async (userData) => {
-    const response = await axios.post('/auth/register', userData);
+    const response = await axios.post('/api/auth/register', userData);
     if (response.data.success) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
@@ -24,7 +24,7 @@ const authService = {
   // Déconnexion
   logout: async () => {
     try {
-      await axios.post('/auth/logout');
+      await axios.post('/api/auth/logout');
     } finally {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -33,13 +33,13 @@ const authService = {
 
   // Obtenir le profil
   getProfile: async () => {
-    const response = await axios.get('/auth/profile');
+    const response = await axios.get('/api/auth/profile');
     return response.data;
   },
 
   // Mettre à jour le profil
   updateProfile: async (data) => {
-    const response = await axios.put('/auth/profile', data);
+    const response = await axios.put('/api/auth/profile', data);
     if (response.data.success) {
       localStorage.setItem('user', JSON.stringify(response.data.data));
     }
@@ -48,7 +48,7 @@ const authService = {
 
   // Changer le mot de passe
   changePassword: async (currentPassword, newPassword) => {
-    const response = await axios.post('/auth/change-password', {
+    const response = await axios.post('/api/auth/change-password', {
       currentPassword,
       newPassword
     });
