@@ -1,4 +1,4 @@
-const { validationResult } = require('express-validator');
+import { validationResult } from 'express-validator';
 
 /**
  * Middleware pour valider les résultats de express-validator
@@ -20,4 +20,4 @@ const validate = (req, res, next) => {
   next();
 };
 
-module.exports = validate;
+export default validate;

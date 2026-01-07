@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { protect, authorize, ROLES } = require('../middleware/auth');
-const {
+import { protect, authorize } from '../middleware/auth.js';
+import { ROLES } from '../config/constants.js';
+import {
   getAllEquipment,
   getEquipmentById,
   createEquipment,
@@ -11,7 +12,7 @@ const {
   returnEquipment,
   addMaintenance,
   getEquipmentStats,
-} = require('../controllers/equipmentController');
+} from '../controllers/equipmentController.js';
 
 // Toutes les routes nécessitent une authentification
 router.use(protect);
@@ -49,4 +50,4 @@ router.post('/:id/lend', lendEquipment);
 router.post('/:id/return', returnEquipment);
 router.post('/:id/maintenance', addMaintenance);
 
-module.exports = router;
+export default router;

@@ -1,14 +1,15 @@
-const Equipment = require('../models/Equipment');
-const { formatPaginatedResponse, getPaginationParams } = require('../utils/helpers');
-const { EQUIPMENT_STATUS } = require('../config/constants');
-const logger = require('../utils/logger');
+import Equipment from '../models/Equipment.js';
+import { formatPaginatedResponse, getPaginationParams } from '../utils/helpers.js';
+import { EQUIPMENT_STATUS } from '../config/constants.js';
+import logger from '../utils/logger.js';
+import mongoose from 'mongoose';
 
 /**
  * @desc    Obtenir tous les équipements
  * @route   GET /api/equipment
  * @access  Private
  */
-exports.getAllEquipment = async (req, res, next) => {
+export const getAllEquipment = async (req, res, next) => {
   try {
     const { page, limit, status, category, search } = req.query;
     const { skip, itemsPerPage } = getPaginationParams(page, limit);
@@ -50,7 +51,7 @@ exports.getAllEquipment = async (req, res, next) => {
  * @route   GET /api/equipment/:id
  * @access  Private
  */
-exports.getEquipmentById = async (req, res, next) => {
+export const getEquipmentById = async (req, res, next) => {
   try {
     const equipment = await Equipment.findById(req.params.id)
       .populate('createdBy', 'firstName lastName')
@@ -79,7 +80,7 @@ exports.getEquipmentById = async (req, res, next) => {
  * @route   POST /api/equipment
  * @access  Private (Admin/Manager)
  */
-exports.createEquipment = async (req, res, next) => {
+export const createEquipment = async (req, res, next) => {
   try {
     req.body.createdBy = req.user._id;
 
@@ -102,7 +103,7 @@ exports.createEquipment = async (req, res, next) => {
  * @route   PUT /api/equipment/:id
  * @access  Private (Admin/Manager)
  */
-exports.updateEquipment = async (req, res, next) => {
+export const updateEquipment = async (req, res, next) => {
   try {
     const equipment = await Equipment.findById(req.params.id);
 
@@ -138,7 +139,7 @@ exports.updateEquipment = async (req, res, next) => {
  * @route   DELETE /api/equipment/:id
  * @access  Private (Admin)
  */
-exports.deleteEquipment = async (req, res, next) => {
+export const deleteEquipment = async (req, res, next) => {
   try {
     console.log('=== DÉBUT deleteEquipment ===');
     console.log('Headers de la requête:', req.headers);
@@ -146,7 +147,7 @@ exports.deleteEquipment = async (req, res, next) => {
     console.log('ID reçu:', req.params.id);
     
     // Vérifier si l'ID est valide
-    if (!req.params.id || !require('mongoose').Types.ObjectId.isValid(req.params.id)) {
+    if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
       console.error('ID invalide:', req.params.id);
       return res.status(400).json({
         success: false,
@@ -202,7 +203,7 @@ exports.deleteEquipment = async (req, res, next) => {
  * @route   POST /api/equipment/:id/lend
  * @access  Private
  */
-exports.lendEquipment = async (req, res, next) => {
+export const lendEquipment = async (req, res, next) => {
   try {
     const equipment = await Equipment.findById(req.params.id);
 
@@ -249,7 +250,7 @@ exports.lendEquipment = async (req, res, next) => {
  * @route   POST /api/equipment/:id/return
  * @access  Private
  */
-exports.returnEquipment = async (req, res, next) => {
+export const returnEquipment = async (req, res, next) => {
   try {
     const equipment = await Equipment.findById(req.params.id);
 
@@ -289,7 +290,7 @@ exports.returnEquipment = async (req, res, next) => {
  * @route   POST /api/equipment/:id/maintenance
  * @access  Private
  */
-exports.addMaintenance = async (req, res, next) => {
+export const addMaintenance = async (req, res, next) => {
   try {
     const equipment = await Equipment.findById(req.params.id);
 
@@ -329,7 +330,7 @@ exports.addMaintenance = async (req, res, next) => {
  * @route   GET /api/equipment/stats
  * @access  Private
  */
-exports.getEquipmentStats = async (req, res, next) => {
+export const getEquipmentStats = async (req, res, next) => {
   try {
     const stats = await Equipment.aggregate([
       {

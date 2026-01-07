@@ -1,27 +1,29 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
-const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
-const path = require('path');
+import dotenv from 'dotenv';
+dotenv.config();
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+import path from 'path';
+
 const __dirname = path.resolve();
 
-const connectDB = require('./config/database');
-const logger = require('./utils/logger');
-const { errorHandler, notFound } = require('./middleware/errorHandler');
+import connectDB from './config/database.js';
+import logger from './utils/logger.js';
+import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 // Importer les routes
-const authRoutes = require('./routes/auth');
-const equipmentRoutes = require('./routes/equipment');
-const orphanRoutes = require('./routes/orphans');
-const donorRoutes = require('./routes/donors');
-const donationRoutes = require('./routes/donations');
-const volunteerRoutes = require('./routes/volunteerRoutes');
-const userRoutes = require('./routes/users');
-const patientRoutes = require('./routes/patientRoutes');
-const loanRoutes = require('./routes/loans');
+import authRoutes from './routes/auth.js';
+import equipmentRoutes from './routes/equipment.js';
+import orphanRoutes from './routes/orphans.js';
+import donorRoutes from './routes/donors.js';
+import donationRoutes from './routes/donations.js';
+import volunteerRoutes from './routes/volunteerRoutes.js';
+import userRoutes from './routes/users.js';
+import patientRoutes from './routes/patientRoutes.js';
+import loanRoutes from './routes/loans.js';
 
 // Initialiser l'application
 const app = express();
@@ -204,4 +206,4 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-module.exports = app;
+export default app;
