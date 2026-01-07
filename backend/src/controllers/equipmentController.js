@@ -1,8 +1,8 @@
+import mongoose from 'mongoose';
 import Equipment from '../models/Equipment.js';
 import { formatPaginatedResponse, getPaginationParams } from '../utils/helpers.js';
 import { EQUIPMENT_STATUS } from '../config/constants.js';
 import logger from '../utils/logger.js';
-import mongoose from 'mongoose';
 
 /**
  * @desc    Obtenir tous les équipements

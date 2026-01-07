@@ -119,9 +119,4 @@ const optionalAuth = async (req, res, next) => {
   next();
 };
 
-export {
-  protect,
-  authorize,
-  optionalAuth,
-  ROLES,
-};
+export { protect, authorize, optionalAuth, ROLES };

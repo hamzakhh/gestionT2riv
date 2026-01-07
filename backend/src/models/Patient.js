@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
-const mongoosePaginate = require('mongoose-paginate-v2');
-const { LOAN_STATUS } = require('../config/constants');
+import mongoose from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2';
+import { LOAN_STATUS } from '../config/constants.js';
 
 const patientSchema = new mongoose.Schema({
   firstName: {
@@ -139,4 +139,4 @@ patientSchema.methods.addLoanToHistory = async function(loanId) {
 
 const Patient = mongoose.model('Patient', patientSchema);
 
-module.exports = Patient;
+export default Patient;

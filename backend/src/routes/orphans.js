@@ -1,9 +1,8 @@
-const express = require('express');
-const router = express.Router();
-const multer = require('multer');
-const { uploadOrphanPhoto: upload } = require('../middleware/upload');
-const { protect, authorize, ROLES } = require('../middleware/auth');
-const {
+import express from 'express';
+import multer from 'multer';
+import { uploadOrphanPhoto as upload } from '../middleware/upload.js';
+import { protect, authorize, ROLES } from '../middleware/auth.js';
+import {
   getAllOrphans,
   getOrphanById,
   createOrphan,
@@ -11,7 +10,9 @@ const {
   deleteOrphan,
   sponsorOrphan,
   getOrphanStats,
-} = require('../controllers/orphanController');
+} from '../controllers/orphanController.js';
+
+const router = express.Router();
 
 router.use(protect);
 
@@ -44,4 +45,4 @@ router.use((err, req, res, next) => {
   next();
 });
 
-module.exports = router;
+export default router;

@@ -1,15 +1,16 @@
-const express = require('express');
-const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
-const { uploadPatientPhotos } = require('../middleware/upload');
-const {
+import express from 'express';
+import { protect, authorize } from '../middleware/auth.js';
+import { uploadPatientPhotos } from '../middleware/upload.js';
+import {
   getPatients,
   getPatientById,
   createPatient,
   updatePatient,
   deletePatient,
   getPatientStats
-} = require('../controllers/patientController');
+} from '../controllers/patientController.js';
+
+const router = express.Router();
 
 // Routes accessibles par tous les utilisateurs authentifiés
 router.get('/', protect, getPatients);
@@ -48,4 +49,4 @@ router.delete(
   deletePatient
 );
 
-module.exports = router;
+export default router;

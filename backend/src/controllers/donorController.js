@@ -1,9 +1,9 @@
-const Donor = require('../models/Donor');
-const Donation = require('../models/Donation');
-const { formatPaginatedResponse, getPaginationParams } = require('../utils/helpers');
-const logger = require('../utils/logger');
+import Donor from '../models/Donor.js';
+import Donation from '../models/Donation.js';
+import { formatPaginatedResponse, getPaginationParams } from '../utils/helpers.js';
+import logger from '../utils/logger.js';
 
-exports.getAllDonors = async (req, res, next) => {
+export const getAllDonors = async (req, res, next) => {
   try {
     const { page, limit, type, search } = req.query;
     const { skip, itemsPerPage } = getPaginationParams(page, limit);
@@ -37,7 +37,7 @@ exports.getAllDonors = async (req, res, next) => {
   }
 };
 
-exports.getDonorById = async (req, res, next) => {
+export const getDonorById = async (req, res, next) => {
   try {
     const donor = await Donor.findById(req.params.id)
       .populate('sponsoredOrphans');
@@ -58,7 +58,7 @@ exports.getDonorById = async (req, res, next) => {
   }
 };
 
-exports.createDonor = async (req, res, next) => {
+export const createDonor = async (req, res, next) => {
   try {
     req.body.createdBy = req.user._id;
     const donor = await Donor.create(req.body);
@@ -75,7 +75,7 @@ exports.createDonor = async (req, res, next) => {
   }
 };
 
-exports.updateDonor = async (req, res, next) => {
+export const updateDonor = async (req, res, next) => {
   try {
     // Ne pas permettre la modification des stats
     delete req.body.totalDonated;
@@ -107,7 +107,7 @@ exports.updateDonor = async (req, res, next) => {
   }
 };
 
-exports.deleteDonor = async (req, res, next) => {
+export const deleteDonor = async (req, res, next) => {
   try {
     const donor = await Donor.findById(req.params.id);
 
@@ -140,7 +140,7 @@ exports.deleteDonor = async (req, res, next) => {
   }
 };
 
-exports.getDonorDonations = async (req, res, next) => {
+export const getDonorDonations = async (req, res, next) => {
   try {
     const { page, limit } = req.query;
     const { skip, itemsPerPage } = getPaginationParams(page, limit);
@@ -162,7 +162,7 @@ exports.getDonorDonations = async (req, res, next) => {
   }
 };
 
-exports.getDonorStats = async (req, res, next) => {
+export const getDonorStats = async (req, res, next) => {
   try {
     const total = await Donor.countDocuments();
     const active = await Donor.countDocuments({ isActive: true });

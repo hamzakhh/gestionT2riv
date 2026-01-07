@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const mongoosePaginate = require('mongoose-paginate-v2');
+import mongoose from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2';
 
 const volunteerSchema = new mongoose.Schema({
   firstName: {
@@ -78,4 +78,4 @@ volunteerSchema.plugin(mongoosePaginate);
 
 const Volunteer = mongoose.model('Volunteer', volunteerSchema);
 
-module.exports = Volunteer;
+export default Volunteer;

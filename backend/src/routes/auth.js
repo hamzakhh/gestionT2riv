@@ -1,5 +1,4 @@
 import express from 'express';
-const router = express.Router();
 import { body } from 'express-validator';
 import validate from '../middleware/validator.js';
 import { protect } from '../middleware/auth.js';
@@ -11,6 +10,8 @@ import {
   changePassword,
   logout,
 } from '../controllers/authController.js';
+
+const router = express.Router();
 
 // Validation des données d'inscription
 const registerValidation = [

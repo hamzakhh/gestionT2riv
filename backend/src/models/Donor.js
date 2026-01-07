@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { DONOR_TYPE, DONATION_CATEGORY, DONATION_FREQUENCY } = require('../config/constants');
+import mongoose from 'mongoose';
+import { DONOR_TYPE, DONATION_CATEGORY, DONATION_FREQUENCY } from '../config/constants.js';
 
 const donorSchema = new mongoose.Schema({
   type: {
@@ -134,4 +134,4 @@ donorSchema.methods.updateStats = async function() {
   await this.save();
 };
 
-module.exports = mongoose.model('Donor', donorSchema);
+export default mongoose.model('Donor', donorSchema);

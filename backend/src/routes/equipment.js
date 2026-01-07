@@ -1,7 +1,5 @@
 import express from 'express';
-const router = express.Router();
-import { protect, authorize } from '../middleware/auth.js';
-import { ROLES } from '../config/constants.js';
+import { protect, authorize, ROLES } from '../middleware/auth.js';
 import {
   getAllEquipment,
   getEquipmentById,
@@ -13,6 +11,8 @@ import {
   addMaintenance,
   getEquipmentStats,
 } from '../controllers/equipmentController.js';
+
+const router = express.Router();
 
 // Toutes les routes nécessitent une authentification
 router.use(protect);

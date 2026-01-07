@@ -1,15 +1,16 @@
-const express = require('express');
-const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
-const { uploadVolunteerPhoto: upload } = require('../middleware/upload');
-const {
+import express from 'express';
+import { protect, authorize } from '../middleware/auth.js';
+import { uploadVolunteerPhoto as upload } from '../middleware/upload.js';
+import {
   getVolunteers,
   getVolunteerById,
   createVolunteer,
   updateVolunteer,
   deleteVolunteer,
   getVolunteerStats
-} = require('../controllers/volunteerController');
+} from '../controllers/volunteerController.js';
+
+const router = express.Router();
 
 // Routes accessibles par tous les utilisateurs authentifiés
 router.get('/', protect, getVolunteers);
@@ -28,4 +29,4 @@ router.delete(
   deleteVolunteer
 );
 
-module.exports = router;
+export default router;

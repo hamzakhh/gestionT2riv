@@ -1,10 +1,10 @@
-const User = require('../models/User');
-const AppError = require('../utils/AppError');
-const catchAsync = require('../utils/catchAsync');
-const bcrypt = require('bcryptjs');
+import User from '../models/User.js';
+import AppError from '../utils/AppError.js';
+import catchAsync from '../utils/catchAsync.js';
+import bcrypt from 'bcryptjs';
 
 // Créer un nouvel utilisateur
-exports.createUser = catchAsync(async (req, res, next) => {
+export const createUser = catchAsync(async (req, res, next) => {
   const { username, email, password, role, firstName, lastName, phone, pagePermissions } = req.body;
 
   // Vérifier si l'utilisateur existe déjà
@@ -36,7 +36,7 @@ exports.createUser = catchAsync(async (req, res, next) => {
 });
 
 // Obtenir tous les utilisateurs
-exports.getAllUsers = catchAsync(async (req, res, next) => {
+export const getAllUsers = catchAsync(async (req, res, next) => {
   const users = await User.find().select('-password');
 
   res.status(200).json({
@@ -49,7 +49,7 @@ exports.getAllUsers = catchAsync(async (req, res, next) => {
 });
 
 // Obtenir un utilisateur par son ID
-exports.getUser = catchAsync(async (req, res, next) => {
+export const getUser = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.params.id).select('-password');
 
   if (!user) {
@@ -65,7 +65,7 @@ exports.getUser = catchAsync(async (req, res, next) => {
 });
 
 // Mettre à jour un utilisateur
-exports.updateUser = catchAsync(async (req, res, next) => {
+export const updateUser = catchAsync(async (req, res, next) => {
   const { password, ...updateData } = req.body;
   
   // Si le mot de passe est fourni, on le hache
@@ -95,7 +95,7 @@ exports.updateUser = catchAsync(async (req, res, next) => {
 });
 
 // Supprimer un utilisateur
-exports.deleteUser = catchAsync(async (req, res, next) => {
+export const deleteUser = catchAsync(async (req, res, next) => {
   const user = await User.findByIdAndDelete(req.params.id);
 
   if (!user) {
