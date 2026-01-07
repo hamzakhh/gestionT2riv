@@ -37,42 +37,21 @@ app.set('trust proxy', true);
 // Connecter à la base de données
 connectDB();
 
-// Middleware de sécurité
-app.use(helmet());
-
-// CORS configuration
+// CORS configuration - Must be BEFORE helmet and other middleware
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Liste des origines autorisées
-    const allowedOrigins = [
-      process.env.FRONTEND_URL || 'http://localhost:3000',
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:5000',
-      'http://localhost:5173',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:3001',
-      'http://127.0.0.1:5000',
-      'http://127.0.0.1:5173',
-      'http://localhost:3001/',
-      'http://localhost:3001/*',
-      'http://127.0.0.1:3001/',
-      'https://gestiont2riv.onrender.com',
-      'https://gestiont2riv-tunisian.onrender.com'
-    ];
-
-    // Autoriser les requêtes sans origine (comme les requêtes Postman) ou si l'origine est dans la liste des autorisées
-    if (!origin || allowedOrigins.some(allowedOrigin => 
-      origin === allowedOrigin || 
-      origin.startsWith(allowedOrigin.replace('*', ''))
-    )) {
-      callback(null, true);
-    } else {
-      console.log('Blocked by CORS:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
+  origin: [
+    'http://localhost:5175', // Vite dev server
+    'http://localhost:3000', // React CRA dev server
+    'http://localhost:3001', // Alternative React port
+    'http://localhost:5173', // Alternative Vite port
+    'http://127.0.0.1:5175', // IP version
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+    'http://127.0.0.1:5173',
+    'https://gestiont2riv.onrender.com', // Production frontend
+    'https://gestiont2riv-tunisian.onrender.com' // Alternative production
+  ],
+  credentials: true, // Support JWT tokens and cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Content-Disposition'],
@@ -80,6 +59,12 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// OPTIONS preflight for all routes
+app.options('*', cors(corsOptions));
+
+// Middleware de sécurité
+app.use(helmet());
 
 // Body parser
 app.use(express.json());

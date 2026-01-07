@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
         // Essayer de récupérer les données fraîches du serveur
         console.log('🔐 Initialisation auth - récupération profil...');
         const response = await authService.getProfile();
-        if (response.data) {
+        if (response.success && response.data) {
           setUser(response.data);
           // Mettre à jour localStorage avec les données fraîches
           localStorage.setItem('user', JSON.stringify(response.data));
@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }) => {
     const response = await authService.login(email, password);
     console.log('📦 Réponse de authService.login:', JSON.stringify(response, null, 2));
     
-    if (response.data && response.data.user) {
+    if (response.success && response.data && response.data.user) {
       console.log('✅ Utilisateur défini dans le contexte:', response.data.user);
       setUser(response.data.user);
     } else {
@@ -80,7 +80,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     const response = await authService.register(userData);
-    if (response.data && response.data.user) {
+    if (response.success && response.data && response.data.user) {
       setUser(response.data.user);
     }
     return response;
@@ -93,7 +93,7 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (data) => {
     const response = await authService.updateProfile(data);
-    if (response.data) {
+    if (response.success && response.data) {
       setUser(response.data);
     }
     return response;
@@ -102,7 +102,7 @@ export const AuthProvider = ({ children }) => {
   const refreshUser = async () => {
     try {
       const response = await authService.getProfile();
-      if (response.data) {
+      if (response.success && response.data) {
         setUser(response.data);
         localStorage.setItem('user', JSON.stringify(response.data));
       }
