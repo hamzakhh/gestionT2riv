@@ -3,30 +3,53 @@ import axios from 'utils/axios';
 const authService = {
   // Connexion
   login: async (email, password) => {
-    const response = await axios.post('/auth/login', { email, password });
-    if (response.data.success) {
-      localStorage.setItem('token', response.data.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+    try {
+      const response = await axios.post('/auth/login', { email, password });
+      
+      // Protection défensive
+      if (!response || !response.data) {
+        throw new Error('Réponse serveur invalide');
+      }
+      
+      if (response.data.success) {
+        localStorage.setItem('token', response.data.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      }
+      return {
+        success: response.data.success,
+        user: response.data.data.user,
+        token: response.data.data.token
+      };
+    } catch (error) {
+      console.error('❌ Erreur login:', error);
+      // Propager l'erreur pour que le frontend puisse l'afficher
+      throw error;
     }
-    return {
-      success: response.data.success,
-      user: response.data.data.user,
-      token: response.data.data.token
-    };
   },
 
   // Inscription
   register: async (userData) => {
-    const response = await axios.post('/auth/register', userData);
-    if (response.data.success) {
-      localStorage.setItem('token', response.data.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+    try {
+      const response = await axios.post('/auth/register', userData);
+      
+      // Protection défensive
+      if (!response || !response.data) {
+        throw new Error('Réponse serveur invalide');
+      }
+      
+      if (response.data.success) {
+        localStorage.setItem('token', response.data.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      }
+      return {
+        success: response.data.success,
+        user: response.data.data.user,
+        token: response.data.data.token
+      };
+    } catch (error) {
+      console.error('❌ Erreur register:', error);
+      throw error;
     }
-    return {
-      success: response.data.success,
-      user: response.data.data.user,
-      token: response.data.data.token
-    };
   },
 
   // Déconnexion
