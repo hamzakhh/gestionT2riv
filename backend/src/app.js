@@ -162,6 +162,7 @@ app.use('/api/v1/patients', patientRoutes);
 app.use(express.static(frontendPath));
 
 // Servir les fichiers uploadés (APRÈS les routes API et frontend)
+/*
 app.use('/uploads', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Methods', 'GET');
@@ -172,7 +173,7 @@ app.use('/uploads', (req, res, next) => {
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Cross-Origin-Resource-Policy', 'cross-origin');
   }
-}));
+}));*/
 
 // Catch-all handler: pour toute requête qui ne correspond pas à une route API,
 // renvoyer le fichier index.html de React (pour le routing côté client)
