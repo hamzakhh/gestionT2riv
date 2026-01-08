@@ -1989,7 +1989,7 @@ const VolunteerList = () => {
                       e.target.onerror = null;
                       if (selectedVolunteer.photo && !selectedVolunteer.photo.startsWith('http')) {
                         const fullPath = selectedVolunteer.photo.replace(/^.*[\\/]/, '');
-                        e.target.src = `${import.meta.env.VITE_BASE_URL}/uploads/volunteers/${fullPath}`;
+                        e.target.src = `http://localhost:5000/uploads/volunteers/${fullPath}`;
                       } else {
                         e.target.src = '';
                       }
