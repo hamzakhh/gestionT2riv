@@ -136,8 +136,17 @@ export const login = async (req, res, next) => {
     }
 
     // Vérifier si l'utilisateur existe
-    const user = await User.findOne({ email }).select('+password');
-    console.log('🔍 Backend: Utilisateur trouvé:', !!user);
+    let user;
+    try {
+      user = await User.findOne({ email }).select('+password');
+      console.log('🔍 Backend: Utilisateur trouvé:', !!user);
+    } catch (dbError) {
+      console.error('❌ Backend: Erreur base de données:', dbError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur de base de données',
+      });
+    }
 
     if (!user) {
       console.log('❌ Backend: Utilisateur non trouvé');
@@ -148,8 +157,17 @@ export const login = async (req, res, next) => {
     }
 
     // Vérifier le mot de passe
-    const isMatch = await user.comparePassword(password);
-    console.log('🔍 Backend: Mot de passe valide:', isMatch);
+    let isMatch;
+    try {
+      isMatch = await user.comparePassword(password);
+      console.log('🔍 Backend: Mot de passe valide:', isMatch);
+    } catch (passwordError) {
+      console.error('❌ Backend: Erreur comparaison mot de passe:', passwordError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la vérification du mot de passe',
+      });
+    }
 
     if (!isMatch) {
       console.log('❌ Backend: Mot de passe invalide');
@@ -169,14 +187,28 @@ export const login = async (req, res, next) => {
     }
 
     // Mettre à jour la dernière connexion
-    user.lastLogin = Date.now();
-    await user.save();
+    try {
+      user.lastLogin = Date.now();
+      await user.save();
+    } catch (saveError) {
+      console.error('⚠️ Backend: Erreur mise à jour lastLogin:', saveError);
+      // Continuer même si la mise à jour échoue
+    }
 
     logger.info(`Connexion réussie: ${user.email}`);
 
     // Générer le token
-    const token = generateToken(user._id);
-    console.log('🔑 Backend: Token généré');
+    let token;
+    try {
+      token = generateToken(user._id);
+      console.log('🔑 Backend: Token généré');
+    } catch (tokenError) {
+      console.error('❌ Backend: Erreur génération token:', tokenError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la génération du token',
+      });
+    }
 
     const responseData = {
       success: true,
@@ -196,10 +228,23 @@ export const login = async (req, res, next) => {
     };
     
     console.log('📦 Backend: Envoi de la réponse:', JSON.stringify(responseData, null, 2));
-    res.status(200).json(responseData);
+    
+    // S'assurer que la réponse est bien envoyée
+    try {
+      return res.status(200).json(responseData);
+    } catch (responseError) {
+      console.error('❌ Backend: Erreur envoi réponse:', responseError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur lors de l\'envoi de la réponse',
+      });
+    }
   } catch (error) {
-    console.error('❌ Backend: Erreur lors de la connexion:', error);
-    next(error);
+    console.error('❌ Backend: Erreur générale lors de la connexion:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la connexion',
+    });
   }
 };
 

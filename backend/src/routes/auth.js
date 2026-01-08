@@ -33,6 +33,16 @@ const loginValidation = [
 router.post('/register', registerValidation, register);
 router.post('/login', loginValidation, login);
 
+// Route de test pour vérifier que le backend répond
+router.get('/test', (req, res) => {
+  console.log('🧪 Test endpoint appelé');
+  res.json({
+    success: true,
+    message: 'Backend fonctionne correctement',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Routes protégées
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);
