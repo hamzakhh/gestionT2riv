@@ -3,35 +3,39 @@ import axios from 'utils/axios';
 const authService = {
   // Connexion
   login: async (email, password) => {
-    const response = await axios.post('/auth/login', { email, password });
+    try {
+      const response = await axios.post('/auth/login', { email, password });
+      console.log('🔍 Response brute:', response);
+      console.log('🔍 Response data:', response.data);
+      console.log('🔍 Response status:', response.status);
+      
+      // Vérifier si la réponse est valide
+      if (!response.data || typeof response.data !== 'object') {
+        console.error('❌ Réponse invalide du serveur:', response.data);
+        throw new Error('Réponse invalide du serveur');
+      }
+      
+      if (response.data.success && response.data.data) {
+        localStorage.setItem('token', response.data.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        console.log('✅ Token et utilisateur sauvegardés');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('❌ Erreur lors de la connexion:', error);
+      throw error;
+    }
+  },
+
+  // Inscription
+  register: async (userData) => {
+    const response = await axios.post('/auth/register', userData);
     if (response.data.success) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
     }
     return response.data;
-  },
-
-  // Inscription
-  register: async (userData) => {
-    try {
-      const response = await axios.post('/auth/register', userData);
-      if (response.data.success) {
-        localStorage.setItem('token', response.data.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.data.user));
-      }
-      return response.data;
-    } catch (error) {
-      // Handle specific MongoDB duplicate key error
-      if (error.response?.data?.message?.includes('E11000 duplicate key error')) {
-        if (error.response?.data?.message?.includes('username')) {
-          throw new Error('Username is already taken. Please choose another one.');
-        }
-        if (error.response?.data?.message?.includes('email')) {
-          throw new Error('Email is already registered. Please use another email or try to login.');
-        }
-      }
-      throw error;
-    }
   },
 
   // Déconnexion

@@ -123,9 +123,12 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
+    
+    console.log('🔐 Backend: Tentative de connexion pour:', email);
 
     // Validation
     if (!email || !password) {
+      console.log('❌ Backend: Email ou mot de passe manquant');
       return res.status(400).json({
         success: false,
         message: 'Email et mot de passe requis',
@@ -134,8 +137,10 @@ export const login = async (req, res, next) => {
 
     // Vérifier si l'utilisateur existe
     const user = await User.findOne({ email }).select('+password');
+    console.log('🔍 Backend: Utilisateur trouvé:', !!user);
 
     if (!user) {
+      console.log('❌ Backend: Utilisateur non trouvé');
       return res.status(401).json({
         success: false,
         message: 'Identifiants invalides',
@@ -144,8 +149,10 @@ export const login = async (req, res, next) => {
 
     // Vérifier le mot de passe
     const isMatch = await user.comparePassword(password);
+    console.log('🔍 Backend: Mot de passe valide:', isMatch);
 
     if (!isMatch) {
+      console.log('❌ Backend: Mot de passe invalide');
       return res.status(401).json({
         success: false,
         message: 'Identifiants invalides',
@@ -154,6 +161,7 @@ export const login = async (req, res, next) => {
 
     // Vérifier si le compte est actif
     if (!user.isActive) {
+      console.log('❌ Backend: Compte désactivé');
       return res.status(401).json({
         success: false,
         message: 'Compte désactivé',
@@ -168,8 +176,9 @@ export const login = async (req, res, next) => {
 
     // Générer le token
     const token = generateToken(user._id);
+    console.log('🔑 Backend: Token généré');
 
-    res.status(200).json({
+    const responseData = {
       success: true,
       message: 'Connexion réussie',
       data: {
@@ -184,8 +193,12 @@ export const login = async (req, res, next) => {
         },
         token,
       },
-    });
+    };
+    
+    console.log('📦 Backend: Envoi de la réponse:', JSON.stringify(responseData, null, 2));
+    res.status(200).json(responseData);
   } catch (error) {
+    console.error('❌ Backend: Erreur lors de la connexion:', error);
     next(error);
   }
 };
