@@ -47,7 +47,6 @@ const API_PREFIX = '/api';
 
 // Base API = host + /api (évite les 404 quand le backend est monté sous /api)
 export const API_URL = `${normalizedApiBaseUrl}${API_PREFIX}`;
-console.log('🔗 API_URL configured:', API_URL);
 // Alias pour la compatibilité avec le code existant
 export const API_BASE_URL = API_URL;
 
