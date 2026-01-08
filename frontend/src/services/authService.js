@@ -13,12 +13,25 @@ const authService = {
 
   // Inscription
   register: async (userData) => {
-    const response = await axios.post('/auth/register', userData);
-    if (response.data.success) {
-      localStorage.setItem('token', response.data.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+    try {
+      const response = await axios.post('/auth/register', userData);
+      if (response.data.success) {
+        localStorage.setItem('token', response.data.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      }
+      return response.data;
+    } catch (error) {
+      // Handle specific MongoDB duplicate key error
+      if (error.response?.data?.message?.includes('E11000 duplicate key error')) {
+        if (error.response?.data?.message?.includes('username')) {
+          throw new Error('Username is already taken. Please choose another one.');
+        }
+        if (error.response?.data?.message?.includes('email')) {
+          throw new Error('Email is already registered. Please use another email or try to login.');
+        }
+      }
+      throw error;
     }
-    return response.data;
   },
 
   // Déconnexion

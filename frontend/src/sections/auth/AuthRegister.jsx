@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 // material-ui
 import Button from '@mui/material/Button';
@@ -23,6 +23,7 @@ import IconButton from 'components/@extended/IconButton';
 import AnimateButton from 'components/@extended/AnimateButton';
 
 import { strengthColor, strengthIndicator } from 'utils/password-strength';
+import authService from 'services/authService';
 
 // assets
 import EyeOutlined from '@ant-design/icons/EyeOutlined';
@@ -31,6 +32,7 @@ import EyeInvisibleOutlined from '@ant-design/icons/EyeInvisibleOutlined';
 // ============================|| JWT - REGISTER ||============================ //
 
 export default function AuthRegister() {
+  const navigate = useNavigate();
   const [level, setLevel] = useState();
   const [showPassword, setShowPassword] = useState(false);
   const handleClickShowPassword = () => {
@@ -50,18 +52,51 @@ export default function AuthRegister() {
     changePassword('');
   }, []);
 
+  const handleSubmit = async (values, { setErrors, setStatus, setSubmitting }) => {
+    try {
+      setSubmitting(true);
+      
+      const userData = {
+        username: values.username,
+        email: values.email,
+        password: values.password,
+        firstName: values.firstname,
+        lastName: values.lastname,
+        phone: values.phone || '',
+        role: 'user' // Default role
+      };
+
+      const response = await authService.register(userData);
+      
+      if (response.success) {
+        setStatus({ success: true });
+        navigate('/dashboard');
+      } else {
+        setStatus({ success: false });
+        setErrors({ submit: response.message || 'Registration failed' });
+      }
+    } catch (error) {
+      setStatus({ success: false });
+      setErrors({ submit: error.response?.data?.message || error.message || 'Registration failed' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <>
       <Formik
         initialValues={{
+          username: '',
           firstname: '',
           lastname: '',
           email: '',
-          company: '',
+          phone: '',
           password: '',
           submit: null
         }}
         validationSchema={Yup.object().shape({
+          username: Yup.string().max(255).required('Username is required'),
           firstname: Yup.string().max(255).required('First Name is required'),
           lastname: Yup.string().max(255).required('Last Name is required'),
           email: Yup.string().email('Must be a valid email').max(255).required('Email is required'),
@@ -70,10 +105,32 @@ export default function AuthRegister() {
             .test('no-leading-trailing-whitespace', 'Password cannot start or end with spaces', (value) => value === value.trim())
             .max(10, 'Password must be less than 10 characters')
         })}
+        onSubmit={handleSubmit}
       >
-        {({ errors, handleBlur, handleChange, touched, values }) => (
-          <form noValidate>
+        {({ errors, handleBlur, handleChange, touched, values, isSubmitting }) => (
+          <form noValidate onSubmit={(e) => e.preventDefault()}>
             <Grid container spacing={3}>
+              <Grid size={12}>
+                <Stack sx={{ gap: 1 }}>
+                  <InputLabel htmlFor="username-signup">Username*</InputLabel>
+                  <OutlinedInput
+                    fullWidth
+                    error={Boolean(touched.username && errors.username)}
+                    id="username-signup"
+                    type="username"
+                    value={values.username}
+                    name="username"
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                    placeholder="johndoe"
+                  />
+                </Stack>
+                {touched.username && errors.username && (
+                  <FormHelperText error id="helper-text-username-signup">
+                    {errors.username}
+                  </FormHelperText>
+                )}
+              </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <Stack sx={{ gap: 1 }}>
                   <InputLabel htmlFor="firstname-signup">First Name*</InputLabel>
@@ -118,21 +175,22 @@ export default function AuthRegister() {
               </Grid>
               <Grid size={12}>
                 <Stack sx={{ gap: 1 }}>
-                  <InputLabel htmlFor="company-signup">Company</InputLabel>
+                  <InputLabel htmlFor="phone-signup">Phone</InputLabel>
                   <OutlinedInput
                     fullWidth
-                    error={Boolean(touched.company && errors.company)}
-                    id="company-signup"
-                    value={values.company}
-                    name="company"
+                    error={Boolean(touched.phone && errors.phone)}
+                    id="phone-signup"
+                    type="phone"
+                    value={values.phone}
+                    name="phone"
                     onBlur={handleBlur}
                     onChange={handleChange}
-                    placeholder="Demo Inc."
+                    placeholder="+1234567890"
                   />
                 </Stack>
-                {touched.company && errors.company && (
-                  <FormHelperText error id="helper-text-company-signup">
-                    {errors.company}
+                {touched.phone && errors.phone && (
+                  <FormHelperText error id="helper-text-phone-signup">
+                    {errors.phone}
                   </FormHelperText>
                 )}
               </Grid>
@@ -225,8 +283,16 @@ export default function AuthRegister() {
               )}
               <Grid size={12}>
                 <AnimateButton>
-                  <Button fullWidth size="large" variant="contained" color="primary">
-                    Create Account
+                  <Button 
+                    fullWidth 
+                    size="large" 
+                    variant="contained" 
+                    color="primary"
+                    type="submit"
+                    disabled={isSubmitting}
+                    onClick={() => handleSubmit(values, { setErrors, setStatus, setSubmitting })}
+                  >
+                    {isSubmitting ? 'Creating Account...' : 'Create Account'}
                   </Button>
                 </AnimateButton>
               </Grid>
