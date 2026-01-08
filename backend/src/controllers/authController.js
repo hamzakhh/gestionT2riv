@@ -7,11 +7,6 @@ import AppError from '../utils/AppError.js';
  * Générer un token JWT
  */
 const generateToken = (id) => {
-  // Vérification critique pour Render
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET manquant - Variables d\'environnement Render incorrectes');
-  }
-  
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || '7d',
   });
@@ -81,11 +76,6 @@ export const restrictTo = (...roles) => {
  */
 export const register = async (req, res, next) => {
   try {
-    // DEBUG RENDER - À supprimer après debug
-    console.log('🔥 REGISTER ROUTE HIT - RENDER DEBUG');
-    console.log('🔥 JWT_SECRET exists:', !!process.env.JWT_SECRET);
-    console.log('🔥 MONGODB_URI exists:', !!process.env.MONGODB_URI);
-    
     const { username, email, password, firstName, lastName, role, phone } = req.body;
 
     // Créer l'utilisateur
@@ -132,11 +122,6 @@ export const register = async (req, res, next) => {
  */
 export const login = async (req, res, next) => {
   try {
-    // DEBUG RENDER - À supprimer après debug
-    console.log('🔥 LOGIN ROUTE HIT - RENDER DEBUG');
-    console.log('🔥 JWT_SECRET exists:', !!process.env.JWT_SECRET);
-    console.log('🔥 MONGODB_URI exists:', !!process.env.MONGODB_URI);
-    
     const { email, password } = req.body;
 
     // Validation
@@ -201,10 +186,6 @@ export const login = async (req, res, next) => {
       },
     });
   } catch (error) {
-    // DEBUG RENDER - Log CRITICAL pour Render
-    console.error('🚨 LOGIN ERROR (RENDER):', error.message);
-    console.error('🚨 STACK:', error.stack);
-    
     next(error);
   }
 };

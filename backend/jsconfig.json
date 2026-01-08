@@ -1,25 +1,27 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
+    "target": "ES2020",
+    "module": "CommonJS",
     "moduleResolution": "Node",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "allowJs": true,
-    "checkJs": false,
-    "outDir": "./dist",
     "rootDir": "./src",
+    "outDir": "./dist",
+
     "strict": false,
+
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true
+
+    "allowJs": true,
+    "checkJs": false,
+
+    "noEmit": false
   },
   "include": [
-    "src/**/*",
-    "**/*.js",
-    "**/*.mjs"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
