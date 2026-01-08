@@ -7,6 +7,11 @@ import AppError from '../utils/AppError.js';
  * Générer un token JWT
  */
 const generateToken = (id) => {
+  // Vérification critique pour Render
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET manquant - Variables d\'environnement Render incorrectes');
+  }
+  
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || '7d',
   });
@@ -76,6 +81,11 @@ export const restrictTo = (...roles) => {
  */
 export const register = async (req, res, next) => {
   try {
+    // DEBUG RENDER - À supprimer après debug
+    console.log('🔥 REGISTER ROUTE HIT - RENDER DEBUG');
+    console.log('🔥 JWT_SECRET exists:', !!process.env.JWT_SECRET);
+    console.log('🔥 MONGODB_URI exists:', !!process.env.MONGODB_URI);
+    
     const { username, email, password, firstName, lastName, role, phone } = req.body;
 
     // Créer l'utilisateur
@@ -122,13 +132,15 @@ export const register = async (req, res, next) => {
  */
 export const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    // DEBUG RENDER - À supprimer après debug
+    console.log('🔥 LOGIN ROUTE HIT - RENDER DEBUG');
+    console.log('🔥 JWT_SECRET exists:', !!process.env.JWT_SECRET);
+    console.log('🔥 MONGODB_URI exists:', !!process.env.MONGODB_URI);
     
-    console.log('🔐 Backend: Tentative de connexion pour:', email);
+    const { email, password } = req.body;
 
     // Validation
     if (!email || !password) {
-      console.log('❌ Backend: Email ou mot de passe manquant');
       return res.status(400).json({
         success: false,
         message: 'Email et mot de passe requis',
@@ -136,20 +148,9 @@ export const login = async (req, res, next) => {
     }
 
     // Vérifier si l'utilisateur existe
-    let user;
-    try {
-      user = await User.findOne({ email }).select('+password');
-      console.log('🔍 Backend: Utilisateur trouvé:', !!user);
-    } catch (dbError) {
-      console.error('❌ Backend: Erreur base de données:', dbError);
-      return res.status(500).json({
-        success: false,
-        message: 'Erreur de base de données',
-      });
-    }
+    const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
-      console.log('❌ Backend: Utilisateur non trouvé');
       return res.status(401).json({
         success: false,
         message: 'Identifiants invalides',
@@ -157,20 +158,9 @@ export const login = async (req, res, next) => {
     }
 
     // Vérifier le mot de passe
-    let isMatch;
-    try {
-      isMatch = await user.comparePassword(password);
-      console.log('🔍 Backend: Mot de passe valide:', isMatch);
-    } catch (passwordError) {
-      console.error('❌ Backend: Erreur comparaison mot de passe:', passwordError);
-      return res.status(500).json({
-        success: false,
-        message: 'Erreur lors de la vérification du mot de passe',
-      });
-    }
+    const isMatch = await user.comparePassword(password);
 
     if (!isMatch) {
-      console.log('❌ Backend: Mot de passe invalide');
       return res.status(401).json({
         success: false,
         message: 'Identifiants invalides',
@@ -179,7 +169,6 @@ export const login = async (req, res, next) => {
 
     // Vérifier si le compte est actif
     if (!user.isActive) {
-      console.log('❌ Backend: Compte désactivé');
       return res.status(401).json({
         success: false,
         message: 'Compte désactivé',
@@ -187,30 +176,15 @@ export const login = async (req, res, next) => {
     }
 
     // Mettre à jour la dernière connexion
-    try {
-      user.lastLogin = Date.now();
-      await user.save();
-    } catch (saveError) {
-      console.error('⚠️ Backend: Erreur mise à jour lastLogin:', saveError);
-      // Continuer même si la mise à jour échoue
-    }
+    user.lastLogin = Date.now();
+    await user.save();
 
     logger.info(`Connexion réussie: ${user.email}`);
 
     // Générer le token
-    let token;
-    try {
-      token = generateToken(user._id);
-      console.log('🔑 Backend: Token généré');
-    } catch (tokenError) {
-      console.error('❌ Backend: Erreur génération token:', tokenError);
-      return res.status(500).json({
-        success: false,
-        message: 'Erreur lors de la génération du token',
-      });
-    }
+    const token = generateToken(user._id);
 
-    const responseData = {
+    res.status(200).json({
       success: true,
       message: 'Connexion réussie',
       data: {
@@ -225,26 +199,13 @@ export const login = async (req, res, next) => {
         },
         token,
       },
-    };
-    
-    console.log('📦 Backend: Envoi de la réponse:', JSON.stringify(responseData, null, 2));
-    
-    // S'assurer que la réponse est bien envoyée
-    try {
-      return res.status(200).json(responseData);
-    } catch (responseError) {
-      console.error('❌ Backend: Erreur envoi réponse:', responseError);
-      return res.status(500).json({
-        success: false,
-        message: 'Erreur lors de l\'envoi de la réponse',
-      });
-    }
-  } catch (error) {
-    console.error('❌ Backend: Erreur générale lors de la connexion:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la connexion',
     });
+  } catch (error) {
+    // DEBUG RENDER - Log CRITICAL pour Render
+    console.error('🚨 LOGIN ERROR (RENDER):', error.message);
+    console.error('🚨 STACK:', error.stack);
+    
+    next(error);
   }
 };
 

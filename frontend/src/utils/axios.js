@@ -30,21 +30,6 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => {
     console.log('✅ Réponse:', response.config.method.toUpperCase(), response.config.url, '→', response.status);
-    console.log('🔍 Response data type:', typeof response.data);
-    console.log('🔍 Response data:', response.data);
-    
-    // Vérifier si la réponse est vide ou invalide
-    if (!response.data) {
-      console.error('❌ Response data est vide ou null');
-      return Promise.reject(new Error('Réponse vide du serveur'));
-    }
-    
-    // Si la réponse est une chaîne vide, c'est probablement une erreur
-    if (typeof response.data === 'string' && response.data.trim() === '') {
-      console.error('❌ Response est une chaîne vide');
-      return Promise.reject(new Error('Réponse invalide du serveur (chaîne vide)'));
-    }
-    
     return response;
   },
   (error) => {

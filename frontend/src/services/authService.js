@@ -3,29 +3,12 @@ import axios from 'utils/axios';
 const authService = {
   // Connexion
   login: async (email, password) => {
-    try {
-      const response = await axios.post('/auth/login', { email, password });
-      console.log('🔍 Response brute:', response);
-      console.log('🔍 Response data:', response.data);
-      console.log('🔍 Response status:', response.status);
-      
-      // Vérifier si la réponse est valide
-      if (!response.data || typeof response.data !== 'object') {
-        console.error('❌ Réponse invalide du serveur:', response.data);
-        throw new Error('Réponse invalide du serveur');
-      }
-      
-      if (response.data.success && response.data.data) {
-        localStorage.setItem('token', response.data.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.data.user));
-        console.log('✅ Token et utilisateur sauvegardés');
-      }
-      
-      return response.data;
-    } catch (error) {
-      console.error('❌ Erreur lors de la connexion:', error);
-      throw error;
+    const response = await axios.post('/auth/login', { email, password });
+    if (response.data.success) {
+      localStorage.setItem('token', response.data.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.data.user));
     }
+    return response.data;
   },
 
   // Inscription
