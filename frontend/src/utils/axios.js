@@ -1,6 +1,11 @@
 import axios from 'axios';
 import { API_URL } from 'config';
 
+// Log l'URL de l'API au chargement (seulement en développement)
+if (import.meta.env.DEV) {
+  console.log('🔗 API URL configurée:', API_URL);
+}
+
 const axiosInstance = axios.create({
   baseURL: API_URL,
   headers: {

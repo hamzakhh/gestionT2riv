@@ -44,10 +44,12 @@ const corsOptions = {
     'http://localhost:3000', // React CRA dev server
     'http://localhost:3001', // Alternative React port
     'http://localhost:5173', // Alternative Vite port
+    'http://localhost:5174', // Current frontend port
     'http://127.0.0.1:5175', // IP version
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
     'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174', // Current frontend port IP version
     'https://gestiont2riv.onrender.com', // Production frontend
     'https://gestiont2riv-tunisian.onrender.com' // Alternative production
   ],

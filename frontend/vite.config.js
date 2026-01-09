@@ -8,18 +8,5 @@ export default defineConfig({
   server: {
     open: true,
   },
-  appType: 'spa',
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          ui: ['@mui/material', '@mui/icons-material', 'antd'],
-          utils: ['axios', 'dayjs', 'formik']
-        }
-      }
-    },
-    chunkSizeWarningLimit: 1000
-  }
+  appType: 'spa'
 });
