@@ -4,6 +4,11 @@ const authService = {
   // Connexion
   login: async (email, password) => {
     try {
+      // Validation basique côté client
+      if (!email || !password) {
+        throw new Error('Veuillez remplir tous les champs');
+      }
+
       const response = await axios.post('/auth/login', { email, password });
       
       if (response.data && response.data.success) {
@@ -19,17 +24,32 @@ const authService = {
     } catch (error) {
       // Si c'est une erreur axios avec une réponse du serveur
       if (error.response) {
-        // Propager l'erreur avec les données du serveur
-        const serverError = new Error(error.response.data?.message || 'Erreur de connexion');
+        const status = error.response.status;
+        const serverMessage = error.response.data?.message;
+        
+        // Messages d'erreur spécifiques selon le code HTTP
+        let errorMessage = serverMessage || 'Erreur de connexion';
+        
+        if (status === 401) {
+          errorMessage = serverMessage || 'Email ou mot de passe incorrect';
+        } else if (status === 400) {
+          errorMessage = serverMessage || 'Données invalides';
+        } else if (status === 403) {
+          errorMessage = serverMessage || 'Compte désactivé. Contactez l\'administrateur';
+        } else if (status >= 500) {
+          errorMessage = 'Erreur serveur. Veuillez réessayer plus tard';
+        }
+        
+        const serverError = new Error(errorMessage);
         serverError.response = error.response;
-        serverError.status = error.response.status;
+        serverError.status = status;
         throw serverError;
       }
-      // Si c'est une erreur réseau
+      // Si c'est une erreur réseau (pas de réponse du serveur)
       if (error.request) {
-        throw new Error('Impossible de se connecter au serveur. Vérifiez votre connexion internet.');
+        throw new Error('Impossible de se connecter au serveur. Vérifiez votre connexion internet et que le serveur est accessible.');
       }
-      // Autre erreur
+      // Autre erreur (validation, etc.)
       throw error;
     }
   },
