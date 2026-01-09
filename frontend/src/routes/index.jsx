@@ -3,7 +3,6 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 // project imports
 import MainRoutes from './MainRoutes';
 import LoginRoutes from './LoginRoutes';
-import RouteError from 'components/RouteError';
 
 // ==============================|| ROUTING RENDER ||============================== //
 
@@ -11,21 +10,13 @@ const router = createBrowserRouter(
   [
     {
       path: '/',
-      element: <Navigate to="/login" replace />,
-      errorElement: <RouteError />
+      element: <Navigate to="/login" replace />
     },
-    {
-      ...MainRoutes,
-      errorElement: <RouteError />
-    },
-    {
-      ...LoginRoutes,
-      errorElement: <RouteError />
-    },
+    MainRoutes,
+    LoginRoutes,
     {
       path: '*',
-      element: <Navigate to="/login" replace />,
-      errorElement: <RouteError />
+      element: <Navigate to="/login" replace />
     }
   ],
   { basename: import.meta.env.VITE_APP_BASE_NAME || '/' }

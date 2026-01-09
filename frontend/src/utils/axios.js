@@ -14,14 +14,10 @@ axiosInstance.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('📤 Requête avec token:', config.method.toUpperCase(), config.url);
-    } else {
-      console.log('📤 Requête sans token:', config.method.toUpperCase(), config.url);
     }
     return config;
   },
   (error) => {
-    console.error('❌ Erreur intercepteur requête:', error);
     return Promise.reject(error);
   }
 );
@@ -29,22 +25,18 @@ axiosInstance.interceptors.request.use(
 // Intercepteur pour gérer les erreurs
 axiosInstance.interceptors.response.use(
   (response) => {
-    console.log('✅ Réponse:', response.config.method.toUpperCase(), response.config.url, '→', response.status);
     return response;
   },
   (error) => {
-    const url = error.config?.url || 'unknown';
-    const method = error.config?.method?.toUpperCase() || 'unknown';
-    const status = error.response?.status || 'no response';
-    
-    console.error(`❌ Erreur: ${method} ${url} → ${status}`);
-    
-    if (error.response?.status === 401) {
-      // NE PAS déconnecter automatiquement - laisser les composants gérer l'erreur
-      console.log('⚠️  401 Unauthorized - Pas de déconnexion automatique');
-      console.log('   URL:', url);
-      // La déconnexion sera gérée par les composants qui appellent l'API
-      return Promise.reject(error);
+    // Pour les erreurs 401 sur les routes de login, ne pas déconnecter automatiquement
+    // Laisser les composants gérer l'erreur selon le contexte
+    if (error.response?.status === 401 && !error.config?.url?.includes('/auth/login')) {
+      // Pour les autres routes protégées, nettoyer le token si invalide
+      // (mais laisser les composants décider de la déconnexion)
+      if (error.response?.data?.message?.includes('token')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
     return Promise.reject(error);
   }

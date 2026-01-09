@@ -108,57 +108,37 @@ export default function AuthLogin({ isDemo = false }) {
           password: Yup.string().required('Mot de passe requis').min(6, 'Au moins 6 caractères')
         })}
         onSubmit={async (values, { setErrors, setStatus, setSubmitting }) => {
-          console.log('🔐 Tentative de connexion...', values.email);
           try {
             setLoading(true);
             const response = await login(values.email, values.password);
             
-            console.log('📦 Réponse login complète:', JSON.stringify(response, null, 2));
-            console.log('📦 response.success:', response.success);
-            console.log('📦 response.data:', response.data);
-            
             if (response && response.success && response.data) {
-              console.log('✅ Connexion réussie!');
-              
               setStatus({ success: true });
               navigate('/dashboard/default');
             } else {
-              console.error('❌ Format de réponse invalide:', response);
               setStatus({ success: false });
-              setErrors({ submit: response?.message || 'Échec de connexion - format de réponse invalide' });
+              setErrors({ submit: response?.message || 'Échec de connexion. Veuillez réessayer.' });
             }
           } catch (err) {
-            console.error('❌ Erreur de connexion dans AuthLogin:', err);
-            console.error('❌ Type d\'erreur:', err.constructor.name);
-            console.error('❌ Détails de l\'erreur:', {
-              status: err.status || err.response?.status,
-              message: err.message || err.response?.data?.message,
-              data: err.response?.data,
-              response: err.response
-            });
             setStatus({ success: false });
             
-            // Message d'erreur plus spécifique
+            // Déterminer le message d'erreur approprié
             let errorMessage = 'Email ou mot de passe incorrect';
             
-            // Vérifier d'abord le message de l'erreur elle-même
-            if (err.message && err.message !== 'Erreur de connexion') {
+            if (err.message) {
               errorMessage = err.message;
-            }
-            // Ensuite vérifier la réponse du serveur
-            else if (err.response?.data?.message) {
+            } else if (err.response?.data?.message) {
               errorMessage = err.response.data.message;
-            }
-            // Vérifier le status
-            else if (err.status === 401 || err.response?.status === 401) {
+            } else if (err.response?.status === 401) {
               errorMessage = 'Identifiants invalides. Vérifiez votre email et mot de passe.';
-            } else if (err.status === 400 || err.response?.status === 400) {
-              errorMessage = 'Veuillez remplir tous les champs.';
-            } else if (!err.response && !err.status) {
-              errorMessage = 'Impossible de se connecter au serveur. Vérifiez votre connexion.';
+            } else if (err.response?.status === 400) {
+              errorMessage = 'Veuillez remplir tous les champs correctement.';
+            } else if (err.response?.status === 403) {
+              errorMessage = 'Compte désactivé. Contactez l\'administrateur.';
+            } else if (!err.response) {
+              errorMessage = 'Impossible de se connecter au serveur. Vérifiez votre connexion internet.';
             }
             
-            console.error('📝 Message d\'erreur final:', errorMessage);
             setErrors({ submit: errorMessage });
           } finally {
             setLoading(false);

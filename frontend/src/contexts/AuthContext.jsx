@@ -25,20 +25,15 @@ export const AuthProvider = ({ children }) => {
 
       try {
         // Essayer de récupérer les données fraîches du serveur
-        console.log('🔐 Initialisation auth - récupération profil...');
         const response = await authService.getProfile();
         if (response.success && response.data) {
           setUser(response.data);
           // Mettre à jour localStorage avec les données fraîches
           localStorage.setItem('user', JSON.stringify(response.data));
-          console.log('✅ Profil récupéré avec succès');
         }
       } catch (error) {
-        console.warn('⚠️ Erreur récupération profil:', error.response?.status || error.message);
-        
         // Si erreur 429 (rate limit), utiliser les données locales
         if (error.response?.status === 429) {
-          console.log('🔄 Rate limit atteint, utilisation données locales');
           const currentUser = authService.getCurrentUser();
           if (currentUser) {
             setUser(currentUser);
@@ -47,6 +42,10 @@ export const AuthProvider = ({ children }) => {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
           }
+        } else if (error.response?.status === 401 || error.response?.status === 403) {
+          // Token invalide ou expiré, nettoyer le localStorage
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
         } else {
           // Pour les autres erreurs, utiliser les données locales
           const currentUser = authService.getCurrentUser();
@@ -65,15 +64,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    console.log('🔐 AuthContext.login appelé avec:', email);
     const response = await authService.login(email, password);
-    console.log('📦 Réponse de authService.login:', JSON.stringify(response, null, 2));
     
     if (response.success && response.data && response.data.user) {
-      console.log('✅ Utilisateur défini dans le contexte:', response.data.user);
       setUser(response.data.user);
-    } else {
-      console.log('⚠️ Pas de user dans la réponse');
     }
     return response;
   };
