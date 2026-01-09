@@ -128,9 +128,38 @@ export default function AuthLogin({ isDemo = false }) {
               setErrors({ submit: response?.message || 'Échec de connexion - format de réponse invalide' });
             }
           } catch (err) {
-            console.error('❌ Erreur de connexion:', err);
+            console.error('❌ Erreur de connexion dans AuthLogin:', err);
+            console.error('❌ Type d\'erreur:', err.constructor.name);
+            console.error('❌ Détails de l\'erreur:', {
+              status: err.status || err.response?.status,
+              message: err.message || err.response?.data?.message,
+              data: err.response?.data,
+              response: err.response
+            });
             setStatus({ success: false });
-            setErrors({ submit: err.response?.data?.message || 'Email ou mot de passe incorrect' });
+            
+            // Message d'erreur plus spécifique
+            let errorMessage = 'Email ou mot de passe incorrect';
+            
+            // Vérifier d'abord le message de l'erreur elle-même
+            if (err.message && err.message !== 'Erreur de connexion') {
+              errorMessage = err.message;
+            }
+            // Ensuite vérifier la réponse du serveur
+            else if (err.response?.data?.message) {
+              errorMessage = err.response.data.message;
+            }
+            // Vérifier le status
+            else if (err.status === 401 || err.response?.status === 401) {
+              errorMessage = 'Identifiants invalides. Vérifiez votre email et mot de passe.';
+            } else if (err.status === 400 || err.response?.status === 400) {
+              errorMessage = 'Veuillez remplir tous les champs.';
+            } else if (!err.response && !err.status) {
+              errorMessage = 'Impossible de se connecter au serveur. Vérifiez votre connexion.';
+            }
+            
+            console.error('📝 Message d\'erreur final:', errorMessage);
+            setErrors({ submit: errorMessage });
           } finally {
             setLoading(false);
             setSubmitting(false);

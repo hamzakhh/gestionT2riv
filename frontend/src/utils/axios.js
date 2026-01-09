@@ -39,30 +39,12 @@ axiosInstance.interceptors.response.use(
     
     console.error(`❌ Erreur: ${method} ${url} → ${status}`);
     
-    // Gérer spécifiquement les erreurs 429 (rate limit)
-    if (error.response?.status === 429) {
-      console.warn('🚦 Rate limit atteint - patientez avant de réessayer');
-      // Ne pas déconnecter pour les erreurs 429
-      return Promise.reject(error);
-    }
-    
     if (error.response?.status === 401) {
-      // NE PAS déconnecter si c'est la requête de login elle-même qui échoue
-      if (url.includes('/auth/login')) {
-        console.log('⚠️  Erreur de login (identifiants incorrects), pas de déconnexion');
-        return Promise.reject(error);
-      }
-      
-      // Token expiré ou invalide pour d'autres requêtes
-      console.log('🚪 401 Unauthorized → Déconnexion automatique');
-      console.log('   URL qui a causé la déconnexion:', url);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      
-      // Petit délai pour voir les logs avant redirection
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 500);
+      // NE PAS déconnecter automatiquement - laisser les composants gérer l'erreur
+      console.log('⚠️  401 Unauthorized - Pas de déconnexion automatique');
+      console.log('   URL:', url);
+      // La déconnexion sera gérée par les composants qui appellent l'API
+      return Promise.reject(error);
     }
     return Promise.reject(error);
   }

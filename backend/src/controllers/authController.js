@@ -122,41 +122,35 @@ export const register = async (req, res, next) => {
  */
 export const login = async (req, res, next) => {
   try {
-    console.log('🔍 Login endpoint called');
-    console.log('📧 Request body:', req.body);
-    console.log('🔑 JWT_SECRET exists:', !!process.env.JWT_SECRET);
-    
     const { email, password } = req.body;
 
     // Validation
     if (!email || !password) {
-      console.log('❌ Missing email or password');
+      logger.warn(`Tentative de connexion sans email ou mot de passe`);
       return res.status(400).json({
         success: false,
         message: 'Email et mot de passe requis',
       });
     }
 
-    console.log('👤 Looking for user:', email);
+    logger.info(`Tentative de connexion pour: ${email}`);
+
     // Vérifier si l'utilisateur existe
     const user = await User.findOne({ email }).select('+password');
-    console.log('👤 User found:', !!user);
 
     if (!user) {
-      console.log('❌ User not found');
+      logger.warn(`Tentative de connexion avec email inexistant: ${email}`);
       return res.status(401).json({
         success: false,
         message: 'Identifiants invalides',
       });
     }
 
-    console.log('🔐 Comparing password...');
     // Vérifier le mot de passe
     const isMatch = await user.comparePassword(password);
-    console.log('🔐 Password match:', isMatch);
 
     if (!isMatch) {
-      console.log('❌ Password mismatch');
+      logger.warn(`Mot de passe incorrect pour: ${email}`);
       return res.status(401).json({
         success: false,
         message: 'Identifiants invalides',
@@ -165,7 +159,7 @@ export const login = async (req, res, next) => {
 
     // Vérifier si le compte est actif
     if (!user.isActive) {
-      console.log('❌ Account inactive');
+      logger.warn(`Tentative de connexion avec compte désactivé: ${email}`);
       return res.status(401).json({
         success: false,
         message: 'Compte désactivé',
@@ -177,14 +171,11 @@ export const login = async (req, res, next) => {
     await user.save();
 
     logger.info(`Connexion réussie: ${user.email}`);
-    console.log('✅ User authenticated successfully');
 
-    console.log('🎟️ Generating token...');
     // Générer le token
     const token = generateToken(user._id);
-    console.log('🎟️ Token generated:', !!token);
 
-    const responseData = {
+    res.status(200).json({
       success: true,
       message: 'Connexion réussie',
       data: {
@@ -199,25 +190,9 @@ export const login = async (req, res, next) => {
         },
         token,
       },
-    };
-    
-    console.log('📤 Sending response:', JSON.stringify(responseData, null, 2));
-    
-    res.status(200).json(responseData);
+    });
   } catch (error) {
-    console.error('💥 Login error:', error);
-    logger.error('Login error:', error);
-    
-    // S'assurer qu'on renvoie toujours du JSON même en cas d'erreur
-    if (!res.headersSent) {
-      res.status(500).json({
-        success: false,
-        message: 'Erreur serveur lors de la connexion',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    } else {
-      next(error);
-    }
+    next(error);
   }
 };
 

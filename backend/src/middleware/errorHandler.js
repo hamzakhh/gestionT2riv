@@ -59,6 +59,26 @@ const errorHandler = (err, req, res, next) => {
     };
   }
 
+  // Erreur de parsing JSON (body malformé)
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    logger.warn(`Requête JSON malformée reçue sur ${req.method} ${req.originalUrl}`);
+    logger.warn(`Headers Content-Type: ${req.headers['content-type']}`);
+    error = {
+      statusCode: 400,
+      message: 'Format JSON invalide dans le corps de la requête. Vérifiez que les données sont correctement formatées.',
+    };
+  }
+  
+  // Autres erreurs SyntaxError (parsing JSON)
+  if (err instanceof SyntaxError && err.message.includes('JSON')) {
+    logger.warn(`Erreur de parsing JSON sur ${req.method} ${req.originalUrl}`);
+    logger.warn(`Message: ${err.message}`);
+    error = {
+      statusCode: 400,
+      message: 'Format JSON invalide. Vérifiez que les données sont correctement formatées.',
+    };
+  }
+
   // S'assurer qu'on renvoie toujours du JSON
   const response = {
     success: false,
