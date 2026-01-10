@@ -6,10 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "node src/app.js",
+    "prestart": "npm run build",
     "dev": "nodemon src/app.js",
-    "build": "cd ../frontend && npm install && npm run build",
-    "build:frontend": "cd ../frontend && npm install && npm run build && mkdir -p ../backend/frontend/dist && cp -r dist/* ../backend/frontend/dist/",
-    "build:render": "cd ../frontend && npm install && npm run build && mkdir -p ../backend/dist && cp -r dist/* ../backend/dist/",
+    "build": "cd ../frontend && npm install && npm run build && mkdir -p ../backend/dist && cp -r dist/* ../backend/dist/",
     "test": "jest --coverage"
   },
   "keywords": [
