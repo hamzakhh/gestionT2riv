@@ -1,7 +1,7 @@
 services:
   # Backend API Service
   - type: web
-    name: creative-association-api
+    name: gestionT2riv
     env: node
     rootDir: backend
     buildCommand: npm install
@@ -9,8 +9,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 5000
+      
 
       # Database
       - key: MONGODB_URI
@@ -43,7 +42,7 @@ services:
         value: "100"
   # Frontend Static Site
   - type: web
-    name: gestiont2riv-frontend
+    name: gestionT2riv-tunisian
     env: static
     rootDir: frontend
     buildCommand: npm install && npm run build
@@ -53,10 +52,12 @@ services:
         value: production
       - key: VITE_API_URL
         value: https://gestiont2riv.onrender.com
-      - src: /assets/(.*)
-        dest: /assets/$1
-      - src: /index.html
-        dest: /index.html
-      - src: /(.*)
-        dest: /index.html
-        status: 200
+
+    routes:
+      - type: rewrite
+        source: /assets/(.*)
+        destination: /assets/$1
+
+      - type: rewrite
+        source: /(.*)
+        destination: /index.html
