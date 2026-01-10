@@ -8,7 +8,7 @@ services:
     startCommand: node src/app.js
     envVars:
       - key: NODE_ENV
-        value: development
+        value: production
       - key: PORT
         value: 5000
 
@@ -52,7 +52,8 @@ services:
       - key: NODE_ENV
         value: production
       - key: VITE_API_URL
-        value: https://gestiont2riv.onrender.com
+        value: https://creative-association-api.onrender.com
+    routes:
       - src: /assets/(.*)
         dest: /assets/$1
       - src: /index.html
