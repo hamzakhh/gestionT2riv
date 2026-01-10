@@ -40,18 +40,29 @@ services:
         value: "900000"
       - key: RATE_LIMIT_MAX_REQUESTS
         value: "100"
-  # Frontend React App
+  # Frontend Static Site
   - type: web
     name: gestionT2riv-tunisian
-    env: node
+    env: static
     rootDir: frontend
     plan: free
+
     buildCommand: npm install && npm run build
-    startCommand: npm run serve
+    publishDir: dist
+
     envVars:
       - key: NODE_ENV
         value: production
       - key: VITE_API_URL
         value: https://gestionT2riv.onrender.com
-      - key: PORT
-        value: "10000"
+    routes:
+      # 1️⃣ Servir les fichiers statiques (CSS, JS, images, fonts)
+      - type: rewrite
+        source: /.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$
+        destination: /$0
+
+      # 2️⃣ SPA : toutes les autres routes vers index.html
+      #    status: 200 important pour éviter les 404 sur refresh
+      - type: rewrite
+        source: /.*
+        destination: /index.html
