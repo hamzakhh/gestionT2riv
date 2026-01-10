@@ -54,7 +54,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: VITE_API_URL
-        value: https://gestionT2riv.onrender.com
+        value: https://gestiont2riv.onrender.com
     routes:
       # 1️⃣ Servir les fichiers statiques du build (js, css, images, fonts)
       - type: rewrite

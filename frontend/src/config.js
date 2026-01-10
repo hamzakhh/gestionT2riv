@@ -41,7 +41,7 @@ export const EQUIPMENT_CONDITION = {
 
 // ==============================|| API CONFIG ||============================== //
 
-const rawApiBaseUrl = import.meta.env.VITE_API_URL || 'https://gestiont2riv-tunisian.onrender.com';
+const rawApiBaseUrl = import.meta.env.VITE_API_URL || 'https://gestiont2riv.onrender.com';
 const normalizedApiBaseUrl = rawApiBaseUrl.trim().replace(/\/+$/, '');
 const API_PREFIX = '/api';
 
