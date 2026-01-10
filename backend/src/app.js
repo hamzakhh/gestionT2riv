@@ -51,7 +51,8 @@ const corsOptions = {
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5174', // Current frontend port IP version
     'https://gestiont2riv.onrender.com', // Production frontend
-    'https://gestiont2riv-tunisian.onrender.com' // Alternative production frontend
+    'https://gestiont2riv-tunisian.onrender.com', // Alternative production frontend
+    'https://gestiont2riv-frontend.onrender.com' // New frontend service name
   ],
   credentials: true, // Support JWT tokens and cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
