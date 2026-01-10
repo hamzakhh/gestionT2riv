@@ -75,8 +75,8 @@ app.use(express.urlencoded({ extended: true }));
 // Servir les fichiers statiques du frontend React
 // Chemin compatible avec Render et local
 const frontendPath = process.env.NODE_ENV === 'production' 
-  ? path.join(__dirname, '../frontend/dist') 
-  : path.join(__dirname, '../frontend/dist');
+  ? path.join(__dirname, '../dist') 
+  : path.join(__dirname, '../dist');
 
 console.log('Frontend path:', frontendPath);
 console.log('__dirname:', __dirname);
@@ -190,7 +190,24 @@ app.get('*', (req, res, next) => {
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    next();
+    // If frontend is not built, return a simple HTML response
+    res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Application</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+        </head>
+        <body>
+          <h1>Application en cours de déploiement...</h1>
+          <p>Le frontend est en cours de construction. Veuillez patienter quelques instants.</p>
+          <script>
+            setTimeout(() => window.location.reload(), 5000);
+          </script>
+        </body>
+      </html>
+    `);
   }
 });
 
