@@ -52,8 +52,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: VITE_API_URL
-        value: https://creative-association-api.onrender.com
-    routes:
+        value: https://gestiont2riv.onrender.com
       - src: /assets/(.*)
         dest: /assets/$1
       - src: /index.html
