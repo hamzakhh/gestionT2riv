@@ -12,8 +12,13 @@
       "dest": "/assets/$1"
     },
     {
-      "src": "/(.*)",
+      "src": "/index.html",
       "dest": "/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html",
+      "status": 200
     }
   ],
   "env": {
