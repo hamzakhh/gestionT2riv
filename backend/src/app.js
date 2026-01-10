@@ -180,8 +180,18 @@ app.use('/uploads', (req, res, next) => {
 // Catch-all handler: pour toute requête qui ne correspond pas à une route API,
 // renvoyer le fichier index.html de React (pour le routing côté client)
 // DOIT être placé APRÈS toutes les routes API mais AVANT les middlewares d'erreur
-app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'));
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
+    return next();
+  }
+  
+  // Check if index.html exists before serving
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    next();
+  }
 });
 
 // Gestion des erreurs (DOIT être à la fin)
