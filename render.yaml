@@ -1,0 +1,34 @@
+services:
+  # Backend API Service
+  - type: web
+    name: creative-association-api
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node src/app.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        value: mongodb+srv://hamza:hamza@cluster0.xofqdwg.mongodb.net/creative-association?appName=Cluster0
+      - key: JWT_SECRET
+        value: e235de07fd51d92e6cb348b359460a1d2604632467975a14dd3ccb87293529541bcb7725f794a74d7f21bba35bdc8e0e770ee4aae5e03a132a232b0d6919a61d
+
+  # Frontend Static Site
+  - type: web
+    name: gestiont2riv-tunisian
+    env: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    envVars:
+      - key: NODE_ENV
+        value: production
+    routes:
+      - src: /assets/(.*)
+        dest: /assets/$1
+      - src: /index.html
+        dest: /index.html
+      - src: /(.*)
+        dest: /index.html
+        status: 200
