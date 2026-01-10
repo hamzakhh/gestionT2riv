@@ -15,7 +15,7 @@ dotenv.config();
 
 import connectDB from './config/database.js';
 import logger from './utils/logger.js';
-import { errorHandler, notFound  }from './middleware/errorHandler.js';
+import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 // Importer les routes
 import authRoutes from './routes/auth.js';
@@ -31,49 +31,43 @@ import loanRoutes from './routes/loans.js';
 // Initialiser l'application
 const app = express();
 
-// Trust proxy for rate limiting when deployed behind reverse proxy
+// Trust proxy for rate limiting behind reverse proxy
 app.set('trust proxy', true);
 
 // Connecter à la base de données
 connectDB();
 
-// CORS configuration - Must be BEFORE helmet and other middleware
+// -----------------------
+// Middleware globaux
+// -----------------------
 const corsOptions = {
   origin: [
-    'http://localhost:5175', // Vite dev server
-    'http://localhost:3000', // React CRA dev server
-    'http://localhost:3001', // Alternative React port
-    'http://localhost:5173', // Alternative Vite port
-    'http://localhost:5174', // Current frontend port
-    'http://127.0.0.1:5175', // IP version
+    'http://localhost:5175',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5175',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
     'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174', // Current frontend port IP version
-    'https://gestiont2riv.onrender.com', // Production frontend
-    'https://gestiont2riv-tunisian.onrender.com', // Alternative production frontend
-    'https://gestiont2riv-frontend.onrender.com' // New frontend service name
+    'http://127.0.0.1:5174',
+    'https://gestiont2riv.onrender.com',
+    'https://gestiont2riv-tunisian.onrender.com',
+    'https://gestiont2riv-frontend.onrender.com'
   ],
-  credentials: true, // Support JWT tokens and cookies
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Content-Disposition'],
   optionsSuccessStatus: 204
 };
-
 app.use(cors(corsOptions));
-
-// OPTIONS preflight for all routes
 app.options('*', cors(corsOptions));
 
-// Middleware de sécurité
 app.use(helmet());
-
-// Body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Compression
 app.use(compression());
 
 // Logger HTTP
@@ -87,16 +81,19 @@ if (process.env.NODE_ENV === 'development') {
   }));
 }
 
-// Rate limiting
+// Rate limiting sur toutes les routes API
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
   message: 'Trop de requêtes depuis cette IP, veuillez réessayer plus tard.',
 });
-
 app.use('/api', limiter);
 
-// Routes de base - API info sous /api uniquement
+// -----------------------
+// Routes
+// -----------------------
+
+// Info API
 app.get('/api', (req, res) => {
   res.json({
     success: true,
@@ -125,40 +122,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Helper function to register routes with and without /api prefix
-const registerRoutes = (path, router) => {
-  app.use(`/api${path}`, router);
-};
-
-// Register all API routes with both /api/... and /... prefixes
-registerRoutes('/auth', authRoutes);
-registerRoutes('/users', userRoutes);
-registerRoutes('/volunteers', volunteerRoutes);
-registerRoutes('/patients', patientRoutes);
-registerRoutes('/equipment', equipmentRoutes);
-registerRoutes('/orphans', orphanRoutes);
-registerRoutes('/donors', donorRoutes);
-registerRoutes('/donations', donationRoutes);
-registerRoutes('/loans', loanRoutes);
-// Keep v1 routes as they are for backward compatibility
-app.use('/api/v1/volunteers', volunteerRoutes);
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/patients', patientRoutes);
-
-// Servir les fichiers uploadés
-app.use('/uploads', (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  next();
-}, express.static(path.join(__dirname, '../uploads'), {
-  setHeaders: (res) => {
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-  }
-}));
-
-// Root route
+// Root route pour Render
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -180,13 +144,50 @@ app.get('/', (req, res) => {
   });
 });
 
-// Gestion des erreurs (DOIT être à la fin)
+// Helper pour enregistrer routes
+const registerRoutes = (path, router) => {
+  app.use(`/api${path}`, router);
+};
+
+// Enregistrement des routes
+registerRoutes('/auth', authRoutes);
+registerRoutes('/users', userRoutes);
+registerRoutes('/volunteers', volunteerRoutes);
+registerRoutes('/patients', patientRoutes);
+registerRoutes('/equipment', equipmentRoutes);
+registerRoutes('/orphans', orphanRoutes);
+registerRoutes('/donors', donorRoutes);
+registerRoutes('/donations', donationRoutes);
+registerRoutes('/loans', loanRoutes);
+
+// Compatibilité v1
+app.use('/api/v1/volunteers', volunteerRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/patients', patientRoutes);
+
+// Servir les fichiers uploadés
+app.use('/uploads', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+}, express.static(path.join(__dirname, '../uploads'), {
+  setHeaders: (res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
+// -----------------------
+// Middleware erreurs
+// -----------------------
 app.use(notFound);
 app.use(errorHandler);
 
-// Démarrer le serveur
+// -----------------------
+// Démarrage serveur
+// -----------------------
 const PORT = process.env.PORT || 5000;
-
 const server = app.listen(PORT, () => {
   logger.info(`
   ╔═══════════════════════════════════════════════════╗
@@ -201,12 +202,11 @@ const server = app.listen(PORT, () => {
   `);
 });
 
-// Gestion des erreurs non gérées
+// Gestion erreurs non gérées
 process.on('unhandledRejection', (err) => {
   logger.error(`Erreur non gérée: ${err.message}`);
   server.close(() => process.exit(1));
 });
-
 process.on('uncaughtException', (err) => {
   logger.error(`Exception non capturée: ${err.message}`);
   process.exit(1);
