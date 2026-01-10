@@ -158,6 +158,28 @@ app.use('/uploads', (req, res, next) => {
   }
 }));
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API Association Creative - Backend Server',
+    version: '1.0.0',
+    endpoints: {
+      api: '/api',
+      health: '/health',
+      auth: '/api/auth',
+      equipment: '/api/equipment',
+      orphans: '/api/orphans',
+      donors: '/api/donors',
+      donations: '/api/donations',
+      patients: '/api/patients',
+      users: '/api/users',
+      loans: '/api/loans',
+      volunteers: '/api/volunteers',
+    },
+  });
+});
+
 // Gestion des erreurs (DOIT être à la fin)
 app.use(notFound);
 app.use(errorHandler);
