@@ -75,8 +75,8 @@ app.use(express.urlencoded({ extended: true }));
 // Servir les fichiers statiques du frontend React
 // Chemin compatible avec Render et local
 const frontendPath = process.env.NODE_ENV === 'production' 
-  ? path.join(__dirname, '../dist') 
-  : path.join(__dirname, '../dist');
+  ? path.join(__dirname, '../frontend/dist') 
+  : path.join(__dirname, '../frontend/dist');
 
 console.log('Frontend path:', frontendPath);
 console.log('__dirname:', __dirname);
@@ -180,35 +180,8 @@ app.use('/uploads', (req, res, next) => {
 // Catch-all handler: pour toute requête qui ne correspond pas à une route API,
 // renvoyer le fichier index.html de React (pour le routing côté client)
 // DOIT être placé APRÈS toutes les routes API mais AVANT les middlewares d'erreur
-app.get('*', (req, res, next) => {
-  // Skip API routes
-  if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
-    return next();
-  }
-  
-  // Check if index.html exists before serving
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    // If frontend is not built, return a simple HTML response
-    res.status(200).send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Application</title>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-        </head>
-        <body>
-          <h1>Application en cours de déploiement...</h1>
-          <p>Le frontend est en cours de construction. Veuillez patienter quelques instants.</p>
-          <script>
-            setTimeout(() => window.location.reload(), 5000);
-          </script>
-        </body>
-      </html>
-    `);
-  }
+app.get('*', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 // Gestion des erreurs (DOIT être à la fin)
@@ -218,10 +191,7 @@ app.use(errorHandler);
 // Démarrer le serveur
 const PORT = process.env.PORT || 5000;
 
-console.log('Starting server on port:', PORT);
-console.log('Environment PORT:', process.env.PORT);
-
-const server = app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, () => {
   logger.info(`
   ╔═══════════════════════════════════════════════════╗
   ║                                                   ║

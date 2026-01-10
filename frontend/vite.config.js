@@ -5,7 +5,6 @@ import jsconfigPaths from 'vite-jsconfig-paths';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), jsconfigPaths()],
-  base: '/',
   server: {
     open: true,
   },
@@ -15,10 +14,7 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          mui: ['@mui/material', '@mui/icons-material']
-        }
+        manualChunks: undefined
       }
     }
   }
