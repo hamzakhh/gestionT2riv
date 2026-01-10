@@ -9,6 +9,7 @@ export default defineConfig({
     open: true,
   },
   appType: 'spa',
+   base: '/',
   build: {
     assetsDir: 'assets',
     sourcemap: false,

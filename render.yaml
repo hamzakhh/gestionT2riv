@@ -45,19 +45,26 @@ services:
     name: gestionT2riv-tunisian
     env: static
     rootDir: frontend
+    plan: free
+
     buildCommand: npm install && npm run build
     publishDir: dist
+
     envVars:
       - key: NODE_ENV
         value: production
       - key: VITE_API_URL
-        value: https://gestiont2riv.onrender.com
+        value: https://gestionT2riv.onrender.com
 
     routes:
+      # 1️⃣ Servir les assets statiques
       - type: rewrite
         source: /assets/(.*)
         destination: /assets/$1
 
+      # 2️⃣ SPA : toutes les autres routes vers index.html
+      #    status: 200 important pour éviter les 404 sur refresh
       - type: rewrite
         source: /(.*)
         destination: /index.html
+        status: 200
