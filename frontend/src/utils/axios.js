@@ -1,11 +1,11 @@
 import axios from 'axios';
 import { API_URL } from 'config';
 
-// Log l'URL de l'API au chargement (en développement et pour debug en production)
-if (import.meta.env.DEV || import.meta.env.MODE === 'production') {
-  console.log('🔗 API URL configurée:', API_URL);
-  console.log('🔗 VITE_API_URL:', import.meta.env.VITE_API_URL);
-}
+// Log l'URL de l'API au chargement (toujours pour debug)
+console.log('🔗 API URL configurée:', API_URL);
+console.log('🔗 VITE_API_URL env:', import.meta.env.VITE_API_URL);
+console.log('🔗 Mode:', import.meta.env.MODE);
+console.log('🔗 Dev:', import.meta.env.DEV);
 
 const axiosInstance = axios.create({
   baseURL: API_URL,

@@ -56,29 +56,7 @@ services:
       - key: VITE_API_URL
         value: https://gestiont2riv.onrender.com
     routes:
-      # 1️⃣ Servir les fichiers statiques du build (js, css, images, fonts)
+      # SPA : toutes les routes vers index.html (les fichiers statiques sont servis automatiquement)
       - type: rewrite
-        source: /js/(.*)
-        destination: /js/$1
-      - type: rewrite
-        source: /css/(.*)
-        destination: /css/$1
-      - type: rewrite
-        source: /images/(.*)
-        destination: /images/$1
-      - type: rewrite
-        source: /fonts/(.*)
-        destination: /fonts/$1
-      - type: rewrite
-        source: /assets/(.*)
-        destination: /assets/$1
-
-      # 2️⃣ Servir les fichiers statiques à la racine
-      - type: rewrite
-        source: /.*\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$
-        destination: /$0
-
-      # 3️⃣ SPA : toutes les autres routes vers index.html
-      - type: rewrite
-        source: /.*
+        source: /*
         destination: /index.html
