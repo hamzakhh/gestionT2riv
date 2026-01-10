@@ -8,15 +8,42 @@ services:
     startCommand: node src/app.js
     envVars:
       - key: NODE_ENV
-        value: production
+        value: development
+      - key: PORT
+        value: 5000
+
+      # Database
       - key: MONGODB_URI
         value: mongodb+srv://hamza:hamza@cluster0.xofqdwg.mongodb.net/creative-association?appName=Cluster0
+
+      # JWT
       - key: JWT_SECRET
         value: e235de07fd51d92e6cb348b359460a1d2604632467975a14dd3ccb87293529541bcb7725f794a74d7f21bba35bdc8e0e770ee4aae5e03a132a232b0d6919a61d
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: JWT_REFRESH_EXPIRE
+        value: 30d
 
+      # Upload Configuration
+      - key: MAX_FILE_SIZE
+        value: "5242880"
+      - key: UPLOAD_PATH
+        value: ./uploads
+
+      # API Configuration
+      - key: API_VERSION
+        value: v1
+      - key: FRONTEND_URL
+        value: https://gestiont2riv-tunisian.onrender.com
+
+      # Rate Limiting
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "900000"
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "100"
   # Frontend Static Site
   - type: web
-    name: gestiont2riv-tunisian
+    name: gestiont2riv-frontend
     env: static
     rootDir: frontend
     buildCommand: npm install && npm run build
@@ -25,8 +52,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: VITE_API_URL
-        value: https://creative-association-api.onrender.com
-    routes:
+        value: https://gestiont2riv.onrender.com
       - src: /assets/(.*)
         dest: /assets/$1
       - src: /index.html
