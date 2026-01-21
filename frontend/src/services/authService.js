@@ -36,6 +36,8 @@ const authService = {
           errorMessage = serverMessage || 'Données invalides';
         } else if (status === 403) {
           errorMessage = serverMessage || 'Compte désactivé. Contactez l\'administrateur';
+        } else if (status === 429) {
+          errorMessage = 'Trop de tentatives de connexion. Veuillez réessayer dans quelques minutes.';
         } else if (status >= 500) {
           errorMessage = 'Erreur serveur. Veuillez réessayer plus tard';
         }

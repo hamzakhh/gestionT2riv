@@ -54,7 +54,6 @@ const corsOptions = {
    // 'http://127.0.0.1:5174',
     'https://gestiont2riv.onrender.com',
       'https://gestiont2riv-tunisian.onrender.com',
-    'https://gestiont2riv-frontend.onrender.com'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -84,9 +83,19 @@ if (process.env.NODE_ENV === 'development') {
 // Rate limiting sur toutes les routes API
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000,
   message: 'Trop de requêtes depuis cette IP, veuillez réessayer plus tard.',
 });
+
+// Rate limiting plus permissif pour les routes d'authentification
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limite à 20 tentatives de connexion par IP
+  message: 'Trop de tentatives de connexion. Veuillez réessayer dans quelques minutes.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use('/api', limiter);
 
 // -----------------------
@@ -150,7 +159,7 @@ const registerRoutes = (path, router) => {
 };
 
 // Enregistrement des routes
-registerRoutes('/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 registerRoutes('/users', userRoutes);
 registerRoutes('/volunteers', volunteerRoutes);
 registerRoutes('/patients', patientRoutes);
@@ -187,7 +196,7 @@ app.use(errorHandler);
 // -----------------------
 // Démarrage serveur
 // -----------------------
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 const server = app.listen(PORT, () => {
   logger.info(`
   ╔═══════════════════════════════════════════════════╗
@@ -207,9 +216,6 @@ process.on('unhandledRejection', (err) => {
   logger.error(`Erreur non gérée: ${err.message}`);
   server.close(() => process.exit(1));
 });
-process.on('uncaughtException', (err) => {
-  logger.error(`Exception non capturée: ${err.message}`);
-  process.exit(1);
-});
+
 
 export default app;
