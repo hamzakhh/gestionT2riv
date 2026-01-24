@@ -56,7 +56,23 @@ services:
       - key: VITE_API_URL
         value: https://gestiont2riv.onrender.com
     routes:
-      # SPA : toutes les routes vers index.html (les fichiers statiques sont servis automatiquement)
+      # Serve static assets first
+      - type: file
+        source: /assets/**
+        destination: /assets/
+      - type: file
+        source: /js/**
+        destination: /js/
+      - type: file
+        source: /css/**
+        destination: /css/
+      - type: file
+        source: /images/**
+        destination: /images/
+      - type: file
+        source: /fonts/**
+        destination: /fonts/
+      # SPA fallback - all other routes to index.html
       - type: rewrite
-        source: /*
+        source: /{any,*}
         destination: /index.html

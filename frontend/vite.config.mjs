@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => {
       historyApiFallback: true,
       proxy: {
         '/api': {
-          //target: 'http://localhost:5000',
-          target: 'https://gestiont2riv.onrender.com',
+          target: 'http://localhost:5000',
+          //target: 'https://gestiont2riv.onrender.com',
           changeOrigin: true,
           secure: false,
           ws: true
