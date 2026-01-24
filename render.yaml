@@ -74,5 +74,5 @@ services:
         destination: /fonts/
       # SPA fallback - all other routes to index.html
       - type: rewrite
-        source: /.{any,*}
+        source: /{any,*}
         destination: /index.html
