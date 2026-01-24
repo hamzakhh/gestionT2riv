@@ -104,6 +104,47 @@ const equipmentService = {
   getStats: async () => {
     const response = await axios.get('/equipment/stats');
     return response.data;
+  },
+
+  // Obtenir tous les équipements disponibles avec limite optionnelle
+  getAvailableEquipment: async (limit = 10000) => {
+    try {
+      const response = await axios.get('/equipment', { 
+        params: { 
+          status: 'available', 
+          limit: limit,
+          all: true
+        } 
+      });
+      
+      // Handle different response formats
+      if (response.data && response.data.data) {
+        return {
+          success: true,
+          data: response.data.data,
+          count: response.data.pagination?.totalItems || response.data.data.length
+        };
+      } else if (Array.isArray(response.data)) {
+        return {
+          success: true,
+          data: response.data,
+          count: response.data.length
+        };
+      } else {
+        return {
+          success: true,
+          data: [],
+          count: 0
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching available equipment:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch available equipment',
+        data: []
+      };
+    }
   }
 };
 

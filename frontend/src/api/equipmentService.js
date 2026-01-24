@@ -24,10 +24,11 @@ api.interceptors.request.use(
 
 const equipmentService = {
   // Récupérer la liste des équipements disponibles
-  getAvailableEquipment: async () => {
+  getAvailableEquipment: async (limit = null) => {
     try {
       console.log('Fetching available equipment...');
-      const response = await api.get('/equipment/available');
+      const url = limit ? `/equipment/available?limit=${limit}` : '/equipment/available';
+      const response = await api.get(url);
       console.log('Available equipment response:', response);
       
       // Vérifier si la réponse contient des données
@@ -47,6 +48,46 @@ const equipmentService = {
       return {
         success: false,
         error: error.message || 'Failed to fetch available equipment',
+        data: []
+      };
+    }
+  },
+
+  // Récupérer tous les équipements (avec pagination)
+  getAllEquipment: async (page = 1, limit = 50000) => {
+    try {
+      console.log(`Fetching all equipment (page ${page}, limit ${limit})...`);
+      const response = await api.get('/equipment', { 
+        params: { page, limit, all: true } 
+      });
+      console.log('All equipment response:', response);
+      
+      // Vérifier si la réponse contient des données
+      if (!response.data) {
+        throw new Error('No data received from server');
+      }
+      
+      // Gérer différents formats de réponse
+      let equipmentData = [];
+      if (response.data.data && Array.isArray(response.data.data)) {
+        equipmentData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        equipmentData = response.data;
+      } else if (response.data.docs && Array.isArray(response.data.docs)) {
+        equipmentData = response.data.docs;
+      }
+      
+      return {
+        success: true,
+        data: equipmentData,
+        count: equipmentData.length,
+        pagination: response.data.pagination || null
+      };
+    } catch (error) {
+      console.error('Error fetching all equipment:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch all equipment',
         data: []
       };
     }

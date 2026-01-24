@@ -509,16 +509,41 @@ const EquipmentList = () => {
   };
 
   const calculateEquipmentStats = (equipmentList) => {
-    const stats = { medical: {}, bureautique: {} };
+    const stats = { 
+      medical: { 
+        items: {}, 
+        status: { available: 0, outOfService: 0, maintenance: 0, total: 0 } 
+      }, 
+      bureautique: { 
+        items: {}, 
+        status: { available: 0, outOfService: 0, maintenance: 0, total: 0 } 
+      } 
+    };
+    
     
     equipmentList.forEach(item => {
       const category = item.category.toLowerCase();
       const name = item.name.trim();
+      const status = item.status;
       
       if (category === 'médical' || category === 'medical') {
-        stats.medical[name] = (stats.medical[name] || 0) + 1;
+        // Count by equipment type
+        stats.medical.items[name] = (stats.medical.items[name] || 0) + 1;
+        
+        // Count by status
+        stats.medical.status.total++;
+        if (status === 'available') stats.medical.status.available++;
+        else if (status === 'decommissioned' || status === 'lost') stats.medical.status.outOfService++;
+        else if (status === 'maintenance') stats.medical.status.maintenance++;
       } else if (category === 'bureautique') {
-        stats.bureautique[name] = (stats.bureautique[name] || 0) + 1;
+        // Count by equipment type
+        stats.bureautique.items[name] = (stats.bureautique.items[name] || 0) + 1;
+        
+        // Count by status
+        stats.bureautique.status.total++;
+        if (status === 'available') stats.bureautique.status.available++;
+        else if (status === 'decommissioned' || status === 'lost') stats.bureautique.status.outOfService++;
+        else if (status === 'maintenance') stats.bureautique.status.maintenance++;
       }
     });
     
@@ -887,23 +912,56 @@ const EquipmentList = () => {
                     <MedicalServicesIcon color="primary" /> Équipements Médicaux
                   </Typography>
                   <Box sx={{ maxHeight: '300px', overflowY: 'auto', pr: 1 }}>
-                    {Object.keys(equipmentStats.medical).length > 0 ? (
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell><strong>Équipement</strong></TableCell>
-                            <TableCell align="right"><strong>Quantité</strong></TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {Object.entries(equipmentStats.medical).map(([name, count]) => (
-                            <TableRow key={`medical-${name}`}>
-                              <TableCell>{name}</TableCell>
-                              <TableCell align="right">{count}</TableCell>
+                    {equipmentStats.medical && equipmentStats.medical.items && Object.keys(equipmentStats.medical.items).length > 0 ? (
+                      <>
+                        <Box sx={{ mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>Statut des équipements</Typography>
+                          <Grid container spacing={2}>
+                            <Grid item xs={6} sm={3}>
+                              <Box>
+                                <Typography variant="body2" color="text.secondary">Total</Typography>
+                                <Typography variant="h6">{equipmentStats.medical.status?.total || 0}</Typography>
+                              </Box>
+                            </Grid>
+                            <Grid item xs={6} sm={3}>
+                              <Box>
+                                <Typography variant="body2" color="success.main">Disponibles</Typography>
+                                <Typography variant="h6" color="success.main">{equipmentStats.medical.status?.available || 0}</Typography>
+                              </Box>
+                            </Grid>
+                            <Grid item xs={6} sm={3}>
+                              <Box>
+                                <Typography variant="body2" color="warning.main">Maintenance</Typography>
+                                <Typography variant="h6" color="warning.main">{equipmentStats.medical.status?.maintenance || 0}</Typography>
+                              </Box>
+                            </Grid>
+                            <Grid item xs={6} sm={3}>
+                              <Box>
+                                <Typography variant="body2" color="error.main">Hors service</Typography>
+                                <Typography variant="h6" color="error.main">{equipmentStats.medical.status?.outOfService || 0}</Typography>
+                              </Box>
+                            </Grid>
+                          </Grid>
+                        </Box>
+                        
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mt: 2, mb: 1 }}>Liste des équipements</Typography>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell><strong>Équipement</strong></TableCell>
+                              <TableCell align="right"><strong>Quantité</strong></TableCell>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHead>
+                          <TableBody>
+                            {Object.entries(equipmentStats.medical.items).map(([name, count]) => (
+                              <TableRow key={`medical-${name}`}>
+                                <TableCell>{name}</TableCell>
+                                <TableCell align="right">{count}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </>
                     ) : (
                       <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                         Aucun équipement médical trouvé
@@ -922,23 +980,56 @@ const EquipmentList = () => {
                     <WorkOutlineIcon color="secondary" /> Équipements de Bureautique
                   </Typography>
                   <Box sx={{ maxHeight: '300px', overflowY: 'auto', pr: 1 }}>
-                    {Object.keys(equipmentStats.bureautique).length > 0 ? (
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell><strong>Équipement</strong></TableCell>
-                            <TableCell align="right"><strong>Quantité</strong></TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {Object.entries(equipmentStats.bureautique).map(([name, count]) => (
-                            <TableRow key={`bureautique-${name}`}>
-                              <TableCell>{name}</TableCell>
-                              <TableCell align="right">{count}</TableCell>
+                    {equipmentStats.bureautique && equipmentStats.bureautique.items && Object.keys(equipmentStats.bureautique.items).length > 0 ? (
+                      <>
+                        <Box sx={{ mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>Statut des équipements</Typography>
+                          <Grid container spacing={2}>
+                            <Grid item xs={6} sm={3}>
+                              <Box>
+                                <Typography variant="body2" color="text.secondary">Total</Typography>
+                                <Typography variant="h6">{equipmentStats.bureautique.status?.total || 0}</Typography>
+                              </Box>
+                            </Grid>
+                            <Grid item xs={6} sm={3}>
+                              <Box>
+                                <Typography variant="body2" color="success.main">Disponibles</Typography>
+                                <Typography variant="h6" color="success.main">{equipmentStats.bureautique.status?.available || 0}</Typography>
+                              </Box>
+                            </Grid>
+                            <Grid item xs={6} sm={3}>
+                              <Box>
+                                <Typography variant="body2" color="warning.main">Maintenance</Typography>
+                                <Typography variant="h6" color="warning.main">{equipmentStats.bureautique.status?.maintenance || 0}</Typography>
+                              </Box>
+                            </Grid>
+                            <Grid item xs={6} sm={3}>
+                              <Box>
+                                <Typography variant="body2" color="error.main">Hors service</Typography>
+                                <Typography variant="h6" color="error.main">{equipmentStats.bureautique.status?.outOfService || 0}</Typography>
+                              </Box>
+                            </Grid>
+                          </Grid>
+                        </Box>
+                        
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mt: 2, mb: 1 }}>Liste des équipements</Typography>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell><strong>Équipement</strong></TableCell>
+                              <TableCell align="right"><strong>Quantité</strong></TableCell>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHead>
+                          <TableBody>
+                            {Object.entries(equipmentStats.bureautique.items).map(([name, count]) => (
+                              <TableRow key={`bureautique-${name}`}>
+                                <TableCell>{name}</TableCell>
+                                <TableCell align="right">{count}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </>
                     ) : (
                       <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                         Aucun équipement de bureautique trouvé

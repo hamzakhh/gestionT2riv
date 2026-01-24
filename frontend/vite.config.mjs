@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
         },
       }
     },
-    preview: {
+    preview: {  
       open: true,
       host: true
     },

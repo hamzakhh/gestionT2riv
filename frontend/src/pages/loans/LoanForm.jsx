@@ -22,7 +22,8 @@ import {
   Stack,
   InputAdornment,
   IconButton,
-  Tooltip
+  Tooltip,
+  Autocomplete
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -30,7 +31,9 @@ import {
   Info as InfoIcon,
   Event as EventIcon,
   Person as PersonIcon,
-  MedicalInformation as EquipmentIcon
+  MedicalInformation as EquipmentIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -60,6 +63,10 @@ const LoanForm = () => {
   const [error, setError] = useState('');
   const [availableEquipment, setAvailableEquipment] = useState([]);
   const [patients, setPatients] = useState([]);
+  const [equipmentSearch, setEquipmentSearch] = useState('');
+  const [patientSearch, setPatientSearch] = useState('');
+  const [filteredEquipment, setFilteredEquipment] = useState([]);
+  const [filteredPatients, setFilteredPatients] = useState([]);
 
   // Charger les équipements disponibles et les patients
   useEffect(() => {
@@ -68,26 +75,30 @@ const LoanForm = () => {
         setLoading(true);
         setError('');
         
-        // Récupérer les équipements disponibles
-        const equipmentResult = await equipmentService.getAvailableEquipment();
+        // Récupérer uniquement les équipements disponibles (jusqu'à 50,000)
+        const equipmentResult = await equipmentService.getAvailableEquipment(50000);
         
         if (equipmentResult.success) {
           // Si la réponse contient des données, les utiliser
-          const equipmentData = Array.isArray(equipmentResult.data) ? equipmentResult.data : [];
+          const equipmentData = equipmentResult.data || [];
           setAvailableEquipment(equipmentData);
+          setFilteredEquipment(equipmentData || []);
           
           if (equipmentData.length === 0) {
-            setError('Aucun équipement disponible pour le moment.');
+            console.warn('Aucun équipement disponible trouvé.');
+          } else {
+            console.log(`Équipements disponibles chargés: ${equipmentData.length}`);
           }
         } else {
           // Si erreur, afficher le message d'erreur
-          console.error('Erreur lors du chargement des équipements:', equipmentResult.error);
-          setError(equipmentResult.error || 'Erreur lors du chargement des équipements');
+          console.error('Erreur lors du chargement des équipements disponibles:', equipmentResult.error);
+          setError(equipmentResult.error || 'Erreur lors du chargement des équipements disponibles');
+          return;
         }
 
-        // Récupérer la liste des patients
+        // Récupérer la liste des patients (jusqu'à 50,000)
         console.log('Chargement des patients...');
-        const patientsResponse = await patientService.getPatients(1, 1000, '');
+        const patientsResponse = await patientService.getPatients(1, 50000, '');
         console.log('Réponse des patients:', patientsResponse);
         
         // Gérer la structure de la réponse
@@ -102,6 +113,13 @@ const LoanForm = () => {
         
         console.log('Liste des patients chargée:', patientsList);
         setPatients(patientsList || []);
+        setFilteredPatients(patientsList || []);
+        
+        if (patientsList.length === 0) {
+          console.warn('Aucun patient trouvé.');
+        } else {
+          console.log(`Patients chargés: ${patientsList.length}`);
+        }
       } catch (err) {
         console.error('Erreur lors du chargement des données:', err);
         setError('Erreur lors du chargement des données. Veuillez réessayer.');
@@ -112,6 +130,38 @@ const LoanForm = () => {
 
     fetchData();
   }, []);
+
+  // Effet pour filtrer les équipements en fonction de la recherche
+  useEffect(() => {
+    if (!equipmentSearch.trim()) {
+      setFilteredEquipment(availableEquipment);
+    } else {
+      const searchLower = equipmentSearch.toLowerCase();
+      const filtered = availableEquipment.filter(equipment => 
+        equipment.name?.toLowerCase().includes(searchLower) ||
+        equipment.type?.toLowerCase().includes(searchLower) ||
+        equipment.serialNumber?.toLowerCase().includes(searchLower) ||
+        equipment.category?.toLowerCase().includes(searchLower)
+      );
+      setFilteredEquipment(filtered);
+    }
+  }, [equipmentSearch, availableEquipment]);
+
+  // Effet pour filtrer les patients en fonction de la recherche
+  useEffect(() => {
+    if (!patientSearch.trim()) {
+      setFilteredPatients(patients);
+    } else {
+      const searchLower = patientSearch.toLowerCase();
+      const filtered = patients.filter(patient => 
+        patient.firstName?.toLowerCase().includes(searchLower) ||
+        patient.lastName?.toLowerCase().includes(searchLower) ||
+        patient.phone?.includes(patientSearch) ||
+        `${patient.firstName} ${patient.lastName}`.toLowerCase().includes(searchLower)
+      );
+      setFilteredPatients(filtered);
+    }
+  }, [patientSearch, patients]);
 
   // Initialisation du formulaire avec Formik
   const formik = useFormik({
@@ -196,43 +246,51 @@ const LoanForm = () => {
                 <Divider sx={{ mb: 3 }} />
                 
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth error={formik.touched.equipmentId && Boolean(formik.errors.equipmentId)}>
-                      <InputLabel id="equipment-label">Équipement *</InputLabel>
-                      <Select
-                        labelId="equipment-label"
-                        id="equipmentId"
-                        name="equipmentId"
-                        value={formik.values.equipmentId}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        label="Équipement *"
-                        startAdornment={
-                          <InputAdornment position="start">
-                            <EquipmentIcon />
-                          </InputAdornment>
-                        }
-                      >
-                        <MenuItem value="">
-                          <em>Sélectionner un équipement</em>
-                        </MenuItem>
-                        {availableEquipment.map((equipment) => (
-                          <MenuItem key={equipment._id} value={equipment._id}>
-                            {equipment.name} - {equipment.serialNumber} ({equipment.type})
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      {formik.touched.equipmentId && formik.errors.equipmentId && (
-                        <Typography variant="caption" color="error">
-                          {formik.errors.equipmentId}
-                        </Typography>
+                  <Grid item xs={12}>
+                    <Autocomplete
+                      fullWidth
+                      options={filteredEquipment}
+                      getOptionLabel={(option) => `${option.name} - ${option.serialNumber} (${option.type})`}
+                      value={filteredEquipment.find(eq => eq._id === formik.values.equipmentId) || null}
+                      onChange={(event, newValue) => {
+                        formik.setFieldValue('equipmentId', newValue?._id || '');
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Rechercher un équipement..."
+                          variant="outlined"
+                          size="small"
+                          onChange={(e) => setEquipmentSearch(e.target.value)}
+                          InputProps={{
+                            ...params.InputProps,
+                            startAdornment: (
+                              <>
+                                <InputAdornment position="start">
+                                  <SearchIcon style={{ color: 'text.secondary' }} />
+                                </InputAdornment>
+                                {params.InputProps.startAdornment}
+                              </>
+                            ),
+                          }}
+                        />
                       )}
-                    </FormControl>
+                      renderOption={(props, option) => (
+                        <Box component="li" {...props}>
+                          <Box>
+                            <Typography variant="body2">
+                              {option.name} - {option.serialNumber}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              {option.type} | {option.category}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      )}
+                    />
                   </Grid>
-                  
-                  {/* Aperçu des détails de l'équipement sélectionné */}
-                  {formik.values.equipmentId && (
-                    <Grid item xs={12} md={6}>
+                  <Grid item xs={12}>
+                    {formik.values.equipmentId && (
                       <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default' }}>
                         <Typography variant="subtitle2" gutterBottom>
                           Détails de l'équipement
@@ -248,8 +306,8 @@ const LoanForm = () => {
                           ))
                         }
                       </Paper>
-                    </Grid>
-                  )}
+                    )}
+                  </Grid>
                 </Grid>
               </Grid>
 
@@ -262,51 +320,54 @@ const LoanForm = () => {
                 <Divider sx={{ mb: 3 }} />
                 
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth error={formik.touched.patientId && Boolean(formik.errors.patientId)}>
-                      <InputLabel id="patient-label">Patient *</InputLabel>
-                      <Select
-                        labelId="patient-label"
-                        id="patientId"
-                        name="patientId"
-                        value={formik.values.patientId}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        label="Patient *"
-                        startAdornment={
-                          <InputAdornment position="start">
-                            <PersonIcon />
-                          </InputAdornment>
-                        }
-                        disabled={patients.length === 0}
-                      >
-                        <MenuItem value="">
-                          <em>{patients.length === 0 ? 'Aucun patient disponible' : 'Sélectionner un patient'}</em>
-                        </MenuItem>
-                        {patients && patients.length > 0 ? (
-                          patients.map((patient) => (
-                            <MenuItem key={patient._id} value={patient._id}>
-                              {patient.firstName} {patient.lastName} 
-                              {patient.phone && ` - ${patient.phone}`}
-                            </MenuItem>
-                          ))
-                        ) : (
-                          <MenuItem disabled>
-                            Aucun patient trouvé
-                          </MenuItem>
-                        )}
-                      </Select>
-                      {formik.touched.patientId && formik.errors.patientId && (
-                        <Typography variant="caption" color="error">
-                          {formik.errors.patientId}
-                        </Typography>
+                  <Grid item xs={12}>
+                    <Autocomplete
+                      fullWidth
+                      options={filteredPatients}
+                      getOptionLabel={(option) => `${option.firstName} ${option.lastName}${option.phone ? ` - ${option.phone}` : ''}`}
+                      value={filteredPatients.find(p => p._id === formik.values.patientId) || null}
+                      onChange={(event, newValue) => {
+                        formik.setFieldValue('patientId', newValue?._id || '');
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Rechercher un patient..."
+                          variant="outlined"
+                          size="small"
+                          onChange={(e) => setPatientSearch(e.target.value)}
+                          InputProps={{
+                            ...params.InputProps,
+                            startAdornment: (
+                              <>
+                                <InputAdornment position="start">
+                                  <PersonIcon />
+                                </InputAdornment>
+                                {params.InputProps.startAdornment}
+                              </>
+                            ),
+                          }}
+                          error={formik.touched.patientId && Boolean(formik.errors.patientId)}
+                          helperText={formik.touched.patientId && formik.errors.patientId}
+                        />
                       )}
-                    </FormControl>
+                      renderOption={(props, option) => (
+                        <Box component="li" {...props}>
+                          <Box>
+                            <Typography variant="body2">
+                              {option.firstName} {option.lastName}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              {option.phone && `📞 ${option.phone}`}
+                              {option.address && ` | 📍 ${option.address}`}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      )}
+                    />
                   </Grid>
-                  
-                  {/* Aperçu des détails du patient sélectionné */}
-                  {formik.values.patientId && (
-                    <Grid item xs={12} md={6}>
+                  <Grid item xs={12}>
+                    {formik.values.patientId && (
                       <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default' }}>
                         <Typography variant="subtitle2" gutterBottom>
                           Informations du patient
@@ -322,8 +383,8 @@ const LoanForm = () => {
                           ))
                         }
                       </Paper>
-                    </Grid>
-                  )}
+                    )}
+                  </Grid>
                 </Grid>
               </Grid>
 
