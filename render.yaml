@@ -1,10 +1,10 @@
 services:
-  # Backend API Service
+  # Backend API + Frontend Service (Unified)
   - type: web
-    name: gestionT2riv
+    name: gestionT2riv-tunisian
     env: node
     rootDir: backend
-    buildCommand: npm install
+    buildCommand: cd ../frontend && npm install && npm run build && cd ../backend && npm install
     startCommand: node src/app.js
     envVars:
       - key: NODE_ENV
@@ -40,39 +40,3 @@ services:
         value: "900000"
       - key: RATE_LIMIT_MAX_REQUESTS
         value: "100"
-  # Frontend Static Site
-  - type: web
-    name: gestionT2riv-tunisian
-    env: static
-    rootDir: frontend
-    plan: free
-
-    buildCommand: npm install && npm run build
-    publishDir: dist
-
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: VITE_API_URL
-        value: https://gestiont2riv.onrender.com
-    routes:
-      # Serve static assets first
-      - type: file
-        source: /assets/**
-        destination: /assets/
-      - type: file
-        source: /js/**
-        destination: /js/
-      - type: file
-        source: /css/**
-        destination: /css/
-      - type: file
-        source: /images/**
-        destination: /images/
-      - type: file
-        source: /fonts/**
-        destination: /fonts/
-      # SPA fallback - all other routes to index.html
-      - type: rewrite
-        source: /{any,*}
-        destination: /index.html
