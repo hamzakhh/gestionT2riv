@@ -187,6 +187,19 @@ app.use('/uploads', (req, res, next) => {
   }
 }));
 
+// Debug endpoint pour vérifier la présence du frontend
+app.get('/__debug_frontend', (req, res) => {
+  const frontendPath = path.resolve(__dirname, '..', '..', 'frontend', 'dist');
+  const fs = require('fs');
+  res.json({
+    frontendPath,
+    exists: fs.existsSync(frontendPath),
+    files: fs.existsSync(frontendPath)
+      ? fs.readdirSync(frontendPath)
+      : []
+  });
+});
+
 // Servir le frontend React en production
 if (process.env.NODE_ENV === 'production') {
   const frontendPath = path.resolve(
