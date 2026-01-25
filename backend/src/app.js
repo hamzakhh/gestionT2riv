@@ -189,10 +189,19 @@ app.use('/uploads', (req, res, next) => {
 
 // Servir le frontend React en production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../../frontend/dist')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
+  const frontendPath = path.resolve(
+    __dirname,
+    '..',        // src → backend
+    '..',        // backend → root
+    'frontend',
+    'dist'
+  );
+
+  app.use(express.static(frontendPath));
+
+  // ⚠️ Important : ne pas intercepter /api
+  app.get(/^\/(?!api).*/, (req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
   });
 }
 
