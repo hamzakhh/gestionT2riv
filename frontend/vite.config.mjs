@@ -1,84 +1,80 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import jsconfigPaths from 'vite-jsconfig-paths';
 import path from 'path';
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-  const API_URL = env.VITE_APP_BASE_NAME || '/';
-  const PORT = 3000;
-
   return {
-    base: API_URL,
-    server: {
-      open: true,
-      port: PORT,
-      host: true,
-      historyApiFallback: true,
-      proxy: {
-        '/api': {
-          //target: 'http://localhost:5000',
-          target: 'https://gestiont2riv.onrender.com',
-          changeOrigin: true,
-          secure: false,
-          ws: true
-        },
-      }
-    },
-    preview: {  
-      open: true,
-      host: true
-    },
-    define: {
-      global: 'window'
-    },
-    resolve: {
-      alias: [
-        {
-          find: '@ant-design/icons',
-          replacement: path.resolve(__dirname, 'node_modules/@ant-design/icons')
-        },
-        {
-          find: '@',
-          replacement: path.resolve(__dirname, 'src')
-        }
-      ]
-    },
+    // ✅ IMPORTANT : toujours '/'
+    base: '/',
+
     plugins: [
       react(),
       jsconfigPaths(),
     ],
+
+    server: {
+      port: 3000,
+      host: true,
+      open: true,
+
+      // 🔹 Proxy API (DEV uniquement)
+      proxy: {
+        '/api': {
+          target: 'https://gestiont2riv-tunisian.onrender.com',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
+    },
+
+    preview: {
+      port: 3000,
+      host: true,
+    },
+
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, 'src'),
+      },
+    },
+
     build: {
+      outDir: 'dist',
+      sourcemap: false,
       chunkSizeWarningLimit: 1000,
-      sourcemap: true,
-      cssCodeSplit: true,
+
       rollupOptions: {
         output: {
-          chunkFileNames: 'js/[name]-[hash].js',
-          entryFileNames: 'js/[name]-[hash].js',
-          assetFileNames: (assetInfo) => {
-            const name = assetInfo.name || '';
-            const ext = name.split('.').pop();
-            if (/\.css$/.test(name)) return `css/[name]-[hash].${ext}`;
-            if (/\.(png|jpe?g|gif|svg|webp|ico)$/.test(name)) return `images/[name]-[hash].${ext}`;
-            if (/\.(woff2?|eot|ttf|otf)$/.test(name)) return `fonts/[name]-[hash].${ext}`;
-            return `assets/[name]-[hash].${ext}`;
-          }
-          // manualChunks: { ... } // Add if you want custom chunk splitting
-        }
+          entryFileNames: 'assets/js/[name]-[hash].js',
+          chunkFileNames: 'assets/js/[name]-[hash].js',
+          assetFileNames: ({ name }) => {
+            if (!name) return 'assets/[name]-[hash][extname]';
+            if (name.endsWith('.css')) {
+              return 'assets/css/[name]-[hash][extname]';
+            }
+            if (/\.(png|jpe?g|gif|svg|webp|ico)$/.test(name)) {
+              return 'assets/images/[name]-[hash][extname]';
+            }
+            if (/\.(woff2?|ttf|otf|eot)$/.test(name)) {
+              return 'assets/fonts/[name]-[hash][extname]';
+            }
+            return 'assets/[name]-[hash][extname]';
+          },
+        },
       },
-      // Only drop console/debugger in production
+
+      // 🔹 Optimisation production
       ...(mode === 'production' && {
+        minify: 'esbuild',
         esbuild: {
           drop: ['console', 'debugger'],
-          pure: ['console.log', 'console.info', 'console.debug', 'console.warn']
-        }
-      })
-      // No need to set build.target unless you need to support older browsers
-      // target: 'baseline-widely-available', // This is now the default
+        },
+      }),
     },
+
     optimizeDeps: {
-      include: ['@mui/material/Tooltip', 'react', 'react-dom', 'react-router-dom']
-    }
+      include: ['react', 'react-dom', 'react-router-dom'],
+    },
   };
 });

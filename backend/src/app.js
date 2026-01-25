@@ -191,19 +191,21 @@ app.use('/uploads', (req, res, next) => {
 if (process.env.NODE_ENV === 'production') {
   const frontendPath = path.resolve(
     __dirname,
-    '..',        // src → backend
-    '..',        // backend → root
+    '..',
+    '..',
     'frontend',
     'dist'
   );
 
   app.use(express.static(frontendPath));
 
-  // ⚠️ Important : ne pas intercepter /api
+  // SPA fallback (React Router)
   app.get(/^\/(?!api).*/, (req, res) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
   });
 }
+
+
 
 // -----------------------
 // Middleware erreurs
