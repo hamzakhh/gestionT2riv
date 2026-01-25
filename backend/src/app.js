@@ -31,6 +31,11 @@ import loanRoutes from './routes/loans.js';
 // Initialiser l'application
 const app = express();
 
+// Route de test pour vérifier le déploiement
+app.get('/__ping', (req, res) => {
+  res.send('PING OK');
+});
+
 // Trust proxy for rate limiting behind reverse proxy
 app.set('trust proxy', 1);
 
