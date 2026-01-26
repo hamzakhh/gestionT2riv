@@ -65,7 +65,8 @@ import {
   SettingOutlined,
   ToolOutlined,
   CheckOutlined,
-  DashboardOutlined
+  DashboardOutlined,
+  PrinterOutlined
 } from '@ant-design/icons';
 import equipmentService from 'services/equipmentService';
 import MainCard from 'components/MainCard';
@@ -372,7 +373,8 @@ const equipmentCategories = {
     'Matelas',
     'Chaise toilette',
     'Oxygène 5L',
-    'Oxygène 10L'
+    'Oxygène 10L',
+    'Pequit'
   ],
   Bureautique: [
     'Chaise',
@@ -527,23 +529,59 @@ const EquipmentList = () => {
       const status = item.status;
       
       if (category === 'médical' || category === 'medical') {
-        // Count by equipment type
-        stats.medical.items[name] = (stats.medical.items[name] || 0) + 1;
+        // Initialize equipment type if not exists
+        if (!stats.medical.items[name]) {
+          stats.medical.items[name] = {
+            total: 0,
+            available: 0,
+            outOfService: 0,
+            maintenance: 0
+          };
+        }
         
-        // Count by status
+        // Count by equipment type and status
+        stats.medical.items[name].total++;
         stats.medical.status.total++;
-        if (status === 'available') stats.medical.status.available++;
-        else if (status === 'decommissioned' || status === 'lost') stats.medical.status.outOfService++;
-        else if (status === 'maintenance') stats.medical.status.maintenance++;
-      } else if (category === 'bureautique') {
-        // Count by equipment type
-        stats.bureautique.items[name] = (stats.bureautique.items[name] || 0) + 1;
         
-        // Count by status
+        if (status === 'available') {
+          stats.medical.items[name].available++;
+          stats.medical.status.available++;
+        }
+        else if (status === 'decommissioned' || status === 'lost') {
+          stats.medical.items[name].outOfService++;
+          stats.medical.status.outOfService++;
+        }
+        else if (status === 'maintenance') {
+          stats.medical.items[name].maintenance++;
+          stats.medical.status.maintenance++;
+        }
+      } else if (category === 'bureautique') {
+        // Initialize equipment type if not exists
+        if (!stats.bureautique.items[name]) {
+          stats.bureautique.items[name] = {
+            total: 0,
+            available: 0,
+            outOfService: 0,
+            maintenance: 0
+          };
+        }
+        
+        // Count by equipment type and status
+        stats.bureautique.items[name].total++;
         stats.bureautique.status.total++;
-        if (status === 'available') stats.bureautique.status.available++;
-        else if (status === 'decommissioned' || status === 'lost') stats.bureautique.status.outOfService++;
-        else if (status === 'maintenance') stats.bureautique.status.maintenance++;
+        
+        if (status === 'available') {
+          stats.bureautique.items[name].available++;
+          stats.bureautique.status.available++;
+        }
+        else if (status === 'decommissioned' || status === 'lost') {
+          stats.bureautique.items[name].outOfService++;
+          stats.bureautique.status.outOfService++;
+        }
+        else if (status === 'maintenance') {
+          stats.bureautique.items[name].maintenance++;
+          stats.bureautique.status.maintenance++;
+        }
       }
     });
     
@@ -812,6 +850,180 @@ const EquipmentList = () => {
     }
   };
 
+  // Fonction pour imprimer tous les numéros de série sous forme de tickets
+  const printAllSerialNumbers = () => {
+    // Créer une nouvelle fenêtre pour l'impression
+    const printWindow = window.open('', '_blank');
+    
+    // Grouper les équipements par statut
+    const availableEquipment = equipment.filter(item => item.status === 'available');
+    const maintenanceEquipment = equipment.filter(item => item.status === 'maintenance');
+    const outOfServiceEquipment = equipment.filter(item => 
+      item.status === 'decommissioned' || item.status === 'lost' || item.status === 'not_working'
+    );
+    
+    // Générer le contenu HTML pour les tickets
+    const generateTicketHTML = (items, title, bgColor, borderColor) => {
+      return `
+        <div style="margin-bottom: 30px;">
+          <h2 style="background-color: ${bgColor}; color: white; padding: 10px; margin: 0 0 15px 0; text-align: center; border-radius: 5px;">
+            ${title}
+          </h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">
+            ${items.map(item => `
+              <div style="
+                border: 2px solid ${borderColor}; 
+                border-radius: 8px; 
+                padding: 15px; 
+                margin: 5px; 
+                background: white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                page-break-inside: avoid;
+              ">
+                <div style="font-weight: bold; color: #333; margin-bottom: 8px; font-size: 14px;">
+                  ${item.name}
+                </div>
+                <div style="font-family: monospace; font-size: 16px; font-weight: bold; color: #000; margin-bottom: 5px;">
+                  N°: ${item.serialNumber}
+                </div>
+                <div style="font-size: 12px; color: #666;">
+                  Catégorie: ${item.category}
+                </div>
+                <div style="font-size: 10px; color: #999; margin-top: 5px;">
+                  ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    };
+    
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Tickets des Numéros de Série - Équipements</title>
+        <style>
+          @page {
+            margin: 1cm;
+            size: A4;
+          }
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+          }
+          .header h1 {
+            margin: 0;
+            font-size: 24px;
+          }
+          .header p {
+            margin: 5px 0 0 0;
+            font-size: 14px;
+            opacity: 0.9;
+          }
+          .summary {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          }
+          .summary-item {
+            text-align: center;
+          }
+          .summary-number {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .summary-label {
+            font-size: 12px;
+            color: #666;
+          }
+          @media print {
+            body { background: white; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>🏷️ TICKETS DES NUMÉROS DE SÉRIE</h1>
+          <p>Gestion des Équipements - ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        </div>
+        
+        <div class="summary">
+          <div class="summary-item">
+            <div class="summary-number" style="color: #4caf50;">${availableEquipment.length}</div>
+            <div class="summary-label">Disponibles</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-number" style="color: #ff9800;">${maintenanceEquipment.length}</div>
+            <div class="summary-label">En Maintenance</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-number" style="color: #f44336;">${outOfServiceEquipment.length}</div>
+            <div class="summary-label">Hors Service</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-number" style="color: #2196f3;">${equipment.length}</div>
+            <div class="summary-label">Total</div>
+          </div>
+        </div>
+        
+        ${availableEquipment.length > 0 ? generateTicketHTML(availableEquipment, '🟢 ÉQUIPEMENTS DISPONIBLES', '#4caf50', '#4caf50') : ''}
+        ${maintenanceEquipment.length > 0 ? generateTicketHTML(maintenanceEquipment, '🟡 ÉQUIPEMENTS EN MAINTENANCE', '#ff9800', '#ff9800') : ''}
+        ${outOfServiceEquipment.length > 0 ? generateTicketHTML(outOfServiceEquipment, '🔴 ÉQUIPEMENTS HORS SERVICE', '#f44336', '#f44336') : ''}
+        
+        <div class="no-print" style="text-align: center; margin-top: 30px;">
+          <button onclick="window.print()" style="
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+          ">
+            🖨️ Imprimer les Tickets
+          </button>
+        </div>
+        
+        <script>
+          // Auto-imprimer après chargement
+          window.onload = function() {
+            setTimeout(() => {
+              window.print();
+            }, 1000);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+    
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    
+    // Attendre un peu que le contenu se charge avant d'imprimer
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  };
+
   // ... rest of the component code ...
 
   return (
@@ -944,19 +1156,46 @@ const EquipmentList = () => {
                           </Grid>
                         </Box>
                         
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mt: 2, mb: 1 }}>Liste des équipements</Typography>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mt: 2, mb: 1 }}>Liste des équipements par statut</Typography>
                         <Table size="small">
                           <TableHead>
                             <TableRow>
                               <TableCell><strong>Équipement</strong></TableCell>
-                              <TableCell align="right"><strong>Quantité</strong></TableCell>
+                              <TableCell align="center"><strong>Disponible</strong></TableCell>
+                              <TableCell align="center"><strong>Maintenance</strong></TableCell>
+                              <TableCell align="center"><strong>Hors Service</strong></TableCell>
+                              <TableCell align="right"><strong>Total</strong></TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {Object.entries(equipmentStats.medical.items).map(([name, count]) => (
+                            {Object.entries(equipmentStats.medical.items).map(([name, statusCounts]) => (
                               <TableRow key={`medical-${name}`}>
-                                <TableCell>{name}</TableCell>
-                                <TableCell align="right">{count}</TableCell>
+                                <TableCell sx={{ fontWeight: 500 }}>{name}</TableCell>
+                                <TableCell align="center">
+                                  <Chip 
+                                    size="small" 
+                                    label={statusCounts.available} 
+                                    color="success" 
+                                    sx={{ fontWeight: 600 }}
+                                  />
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Chip 
+                                    size="small" 
+                                    label={statusCounts.maintenance} 
+                                    color="warning" 
+                                    sx={{ fontWeight: 600 }}
+                                  />
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Chip 
+                                    size="small" 
+                                    label={statusCounts.outOfService} 
+                                    color="error" 
+                                    sx={{ fontWeight: 600 }}
+                                  />
+                                </TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 700 }}>{statusCounts.total}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -1012,19 +1251,46 @@ const EquipmentList = () => {
                           </Grid>
                         </Box>
                         
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mt: 2, mb: 1 }}>Liste des équipements</Typography>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mt: 2, mb: 1 }}>Liste des équipements par statut</Typography>
                         <Table size="small">
                           <TableHead>
                             <TableRow>
                               <TableCell><strong>Équipement</strong></TableCell>
-                              <TableCell align="right"><strong>Quantité</strong></TableCell>
+                              <TableCell align="center"><strong>Disponible</strong></TableCell>
+                              <TableCell align="center"><strong>Maintenance</strong></TableCell>
+                              <TableCell align="center"><strong>Hors Service</strong></TableCell>
+                              <TableCell align="right"><strong>Total</strong></TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {Object.entries(equipmentStats.bureautique.items).map(([name, count]) => (
+                            {Object.entries(equipmentStats.bureautique.items).map(([name, statusCounts]) => (
                               <TableRow key={`bureautique-${name}`}>
-                                <TableCell>{name}</TableCell>
-                                <TableCell align="right">{count}</TableCell>
+                                <TableCell sx={{ fontWeight: 500 }}>{name}</TableCell>
+                                <TableCell align="center">
+                                  <Chip 
+                                    size="small" 
+                                    label={statusCounts.available} 
+                                    color="success" 
+                                    sx={{ fontWeight: 600 }}
+                                  />
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Chip 
+                                    size="small" 
+                                    label={statusCounts.maintenance} 
+                                    color="warning" 
+                                    sx={{ fontWeight: 600 }}
+                                  />
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Chip 
+                                    size="small" 
+                                    label={statusCounts.outOfService} 
+                                    color="error" 
+                                    sx={{ fontWeight: 600 }}
+                                  />
+                                </TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 700 }}>{statusCounts.total}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -1047,13 +1313,42 @@ const EquipmentList = () => {
         <MainCard
           title="Gestion des équipements"
           secondary={
-            <Button
-              variant="contained"
-              startIcon={<PlusOutlined />}
-              onClick={handleOpenDialog}
-            >
-              Nouvel équipement
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Button
+                variant="outlined"
+                startIcon={<PrinterOutlined />}
+                onClick={printAllSerialNumbers}
+                disabled={equipment.length === 0}
+                sx={{
+                  borderRadius: '12px',
+                  px: 3,
+                  py: 1.5,
+                  fontWeight: 600,
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  backgroundColor: 'primary.light',
+                  '&:hover': {
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    borderColor: 'primary.main',
+                  },
+                  '&:disabled': {
+                    backgroundColor: 'grey.200',
+                    borderColor: 'grey.400',
+                    color: 'grey.500',
+                  }
+                }}
+              >
+                🎫 Imprimer Tickets
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<PlusOutlined />}
+                onClick={handleOpenDialog}
+              >
+                Nouvel équipement
+              </Button>
+            </Box>
           }
         >
           <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
