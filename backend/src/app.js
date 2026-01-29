@@ -1,5 +1,3 @@
-console.log('### APP DEBUG 2026 ###');
-
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
@@ -29,6 +27,8 @@ import volunteerRoutes from './routes/volunteerRoutes.js';
 import userRoutes from './routes/users.js';
 import patientRoutes from './routes/patientRoutes.js';
 import loanRoutes from './routes/loans.js';
+import ramadhanRoutes from './routes/ramadhan.js';
+import zakatRoutes from './routes/zakat.js';
 
 // Initialiser l'application
 const app = express();
@@ -125,6 +125,8 @@ app.get('/api', (req, res) => {
       users: '/api/users',
       loans: '/api/loans',
       volunteers: '/api/volunteers',
+      ramadhan: '/api/ramadhan',
+      zakat: '/api/zakat',
     },
   });
 });
@@ -156,6 +158,8 @@ app.get('/', (req, res) => {
       users: '/api/users',
       loans: '/api/loans',
       volunteers: '/api/volunteers',
+      ramadhan: '/api/ramadhan',
+      zakat: '/api/zakat',
     },
   });
 });
@@ -175,6 +179,8 @@ registerRoutes('/orphans', orphanRoutes);
 registerRoutes('/donors', donorRoutes);
 registerRoutes('/donations', donationRoutes);
 registerRoutes('/loans', loanRoutes);
+registerRoutes('/ramadhan', ramadhanRoutes);
+registerRoutes('/zakat', zakatRoutes);
 
 // Compatibilité v1
 app.use('/api/v1/volunteers', volunteerRoutes);
@@ -236,7 +242,7 @@ app.use(errorHandler);
 // -----------------------
 // Démarrage serveur
 // -----------------------
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
   logger.info(`
   ╔═══════════════════════════════════════════════════╗

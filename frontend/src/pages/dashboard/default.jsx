@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from 'contexts/AuthContext';
 
 // material-ui
 import Button from '@mui/material/Button';
@@ -29,6 +30,7 @@ import donorService from 'services/donorService';
 // ==============================|| DASHBOARD - DEFAULT ||============================== //
 
 export default function DashboardDefault() {
+  const { user } = useAuth();
   const [stats, setStats] = useState({
     orphans: {},
     equipment: {},
@@ -66,7 +68,43 @@ export default function DashboardDefault() {
       py: 4
     }}>
       <Grid container rowSpacing={4.5} columnSpacing={2.75} sx={{ maxWidth: '1200px', mx: 'auto', px: 2 }}>
-      {/* Ligne des statistiques */}
+        {/* Welcome Section */}
+        <Grid item xs={12}>
+          <MainCard>
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 2
+            }}>
+              <Box>
+                <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  Bienvenue, {user?.name || user?.username || 'Utilisateur'} !
+                </Typography>
+                <Typography variant="h6" color="textSecondary">
+                  {user?.email || 'email@example.com'}
+                </Typography>
+                <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                  Rôle: {user?.role === 'admin' ? 'Administrateur' : user?.role === 'user' ? 'Utilisateur' : user?.role || 'Non défini'}
+                </Typography>
+              </Box>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center',
+                gap: 2
+              }}>
+                <Chip 
+                  label={user?.role === 'admin' ? 'Admin' : user?.role === 'user' ? 'Utilisateur' : 'Invité'}
+                  color={user?.role === 'admin' ? 'primary' : 'default'}
+                  variant="outlined"
+                />
+              </Box>
+            </Box>
+          </MainCard>
+        </Grid>
+        
+        {/* Ligne des statistiques */}
       <Grid container spacing={2} sx={{ mt: 2, width: '100%', maxWidth: '100%', justifyContent: 'center', flexWrap: 'nowrap' }}>
         {/* Carte Orphelins */}
         <Grid item xs={12} sm={6} lg={3} sx={{ flex: '0 1 280px', maxWidth: '100%' }}>

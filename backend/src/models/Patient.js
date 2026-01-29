@@ -40,7 +40,7 @@ const patientSchema = new mongoose.Schema({
   },
   specificEquipment: {
     type: String,
-    enum: ['', 'lit', 'matelas', 'concentrateur d\'oxygène'],
+    enum: ['', 'Chaise roulante normale', 'Chaise roulante électrique', 'Lève malade', 'Chaise de douche', 'Chaise dispositif de toilette', 'Rehausseur de toilette', 'Trépied', 'Rampe à marche', 'Cannes canadiennes', 'Canne personne âgée', 'Déambulateur', 'Coussin orthopédique', 'lit', 'matelas', 'concentrateur d\'oxygène'],
     default: ''
   },
   entryDate: {

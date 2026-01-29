@@ -66,11 +66,24 @@ const Patient = () => {
 
   const handleSubmit = async (formData) => {
     const data = new FormData();
+    
+    // Append all non-file fields
     Object.keys(formData).forEach(key => {
-      if (formData[key] !== null && formData[key] !== undefined) {
+      if (formData[key] !== null && formData[key] !== undefined && !(formData[key] instanceof File)) {
         data.append(key, formData[key]);
       }
     });
+    
+    // Append file fields with correct names
+    if (formData.cinPhoto instanceof File) {
+      data.append('cinPhoto', formData.cinPhoto);
+    }
+    if (formData.contractPhoto instanceof File) {
+      data.append('contractPhoto', formData.contractPhoto);
+    }
+    if (formData.notebookPhoto instanceof File) {
+      data.append('notebookPhoto', formData.notebookPhoto);
+    }
 
     try {
       if (editingPatient) {

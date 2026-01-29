@@ -51,22 +51,25 @@ const getPatients = async (page = 1, limit = 10, search = '') => {
 
 // Get a patient by ID
 const getPatientById = async (id) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.get(`${API_URL}/patients/${id}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return response.data;
+  try {
+    const response = await api.get(`/patients/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching patient by ID:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    throw error;
+  }
 };
 
 // Create a new patient
 const createPatient = async (patientData) => {
-  const token = localStorage.getItem('token');
-  
   try {
-    const response = await axios.post(API_URL, patientData, {
+    const response = await api.post('/patients', patientData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${token}`
+        'Content-Type': 'multipart/form-data'
       },
       withCredentials: true
     });
@@ -90,13 +93,10 @@ const createPatient = async (patientData) => {
 
 // Update a patient
 const updatePatient = async (id, patientData) => {
-  const token = localStorage.getItem('token');
-  
   try {
-    const response = await axios.put(`${API_URL}/${id}`, patientData, {
+    const response = await api.put(`/patients/${id}`, patientData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${token}`
+        'Content-Type': 'multipart/form-data'
       },
       withCredentials: true
     });
@@ -120,20 +120,32 @@ const updatePatient = async (id, patientData) => {
 
 // Delete a patient
 const deletePatient = async (id) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.delete(`${API_URL}/${id}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return response.data;
+  try {
+    const response = await api.delete(`/patients/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting patient:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    throw error;
+  }
 };
 
 // Get patient statistics
 const getPatientStats = async () => {
-  const token = localStorage.getItem('token');
-  const response = await axios.get(`${API_URL}/stats`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return response.data;
+  try {
+    const response = await api.get('/patients/stats');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching patient stats:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    throw error;
+  }
 };
 
 export default {

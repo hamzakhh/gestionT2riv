@@ -25,7 +25,7 @@ import UserOutlined from '@ant-design/icons/UserOutlined';
 
 export default function Profile() {
   const theme = useTheme();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
 
   const anchorRef = useRef(null);
@@ -132,10 +132,10 @@ export default function Profile() {
                       </Grid>
                       <Grid item xs zeroMinWidth>
                         <Typography variant="h6" noWrap>
-                          John Doe
+                          {user?.name || user?.username || 'Utilisateur'}
                         </Typography>
                         <Typography variant="body2" color="textSecondary" noWrap>
-                          john.doe@example.com
+                          {user?.email || 'email@example.com'}
                         </Typography>
                       </Grid>
                     </Grid>

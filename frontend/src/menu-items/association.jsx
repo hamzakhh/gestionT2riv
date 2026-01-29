@@ -7,7 +7,9 @@ import {
   TeamOutlined,
   UsergroupAddOutlined,
   UserOutlined,
-  SwapOutlined
+  SwapOutlined,
+  UserAddOutlined,
+  BankOutlined
 } from '@ant-design/icons';
 
 // icons
@@ -18,7 +20,10 @@ const icons = {
   GiftOutlined,
   TeamOutlined,
   UsergroupAddOutlined,
-  UserOutlined
+  UserOutlined,
+  SwapOutlined,
+  UserAddOutlined,
+  BankOutlined
 };
 
 // ==============================|| MENU ITEMS - ASSOCIATION ||============================== //
@@ -103,18 +108,12 @@ const association = {
       breadcrumbs: true
     },
     {
-      id: 'ramadhan',
-      title: 'Ramadhan',
-      type: 'item',
-      url: '/ramadhan',
-      icon: icons.IconWindmill
-    },
-    {
       id: 'patients',
       title: 'Patients',
       type: 'item',
       url: '/patients',
-      icon: icons.IconHeartbeat
+      icon: icons.UserAddOutlined,
+      breadcrumbs: true
     }
   ]
 };

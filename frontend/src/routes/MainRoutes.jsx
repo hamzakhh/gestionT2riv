@@ -34,7 +34,8 @@ const RamadhanPage = Loadable(lazy(() => import('../pages/ramadhan')));
 const DonRamadhan = Loadable(lazy(() => import('../pages/ramadhan/DonRamadhan')));
 const Patient = Loadable(lazy(() => import('../pages/patient/Patient')));
 
-// Zakat module temporarily removed
+// Zakat
+const ZakatList = Loadable(lazy(() => import('../pages/zakat')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -161,6 +162,10 @@ const MainRoutes = {
           element: <RoleGuard pageKey="orphans"><OrphanList /></RoleGuard>
         }
       ]
+    },
+    {
+      path: 'zakat',
+      element: <RoleGuard pageKey="zakat"><ZakatList /></RoleGuard>
     }
   ]
 };

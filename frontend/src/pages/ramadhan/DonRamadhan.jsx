@@ -26,10 +26,12 @@ import {
   MenuItem,
   Chip,
   Alert,
-  LinearProgress
+  LinearProgress,
+  Snackbar
 } from '@mui/material';
 import MainCard from 'components/MainCard';
 import logo from 'assets/images/t2riv-logo.jpg';
+import ramadhanService from '../../services/ramadhanService.js';
 
 const DonRamadhan = () => {
   // Options de produits prédéfinis
@@ -100,6 +102,9 @@ const DonRamadhan = () => {
   ];
   const [donations, setDonations] = useState([]);
   const [productTotals, setProductTotals] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedDonation, setSelectedDonation] = useState(null);
   const [editingDistributed, setEditingDistributed] = useState({});
@@ -128,7 +133,13 @@ const DonRamadhan = () => {
     weeklyDistributedTotal: 0,
     weeklyDistributedQuantity: 0,
     weeklyRemainingTotal: 0,
-    weeklyRemainingQuantity: 0
+    weeklyRemainingQuantity: 0,
+    monthlyTotal: 0,
+    monthlyQuantity: 0,
+    monthlyDistributedTotal: 0,
+    monthlyDistributedQuantity: 0,
+    monthlyRemainingTotal: 0,
+    monthlyRemainingQuantity: 0
   });
 
   // Calculer les totaux par produit
@@ -175,6 +186,7 @@ const DonRamadhan = () => {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     let dailyTotal = 0;
     let dailyQuantity = 0;
@@ -190,8 +202,15 @@ const DonRamadhan = () => {
     let weeklyRemainingTotal = 0;
     let weeklyRemainingQuantity = 0;
 
+    let monthlyTotal = 0;
+    let monthlyQuantity = 0;
+    let monthlyDistributedTotal = 0;
+    let monthlyDistributedQuantity = 0;
+    let monthlyRemainingTotal = 0;
+    let monthlyRemainingQuantity = 0;
+
     donationsList.forEach(donation => {
-      const donationDate = new Date(donation.date);
+      const donationDate = new Date(donation.donationDate || donation.date);
       const total = donation.unitPrice * donation.quantity;
       const distributedQuantity = donation.distributedQuantity || 0;
       const distributedTotal = donation.unitPrice * distributedQuantity;
@@ -217,6 +236,17 @@ const DonRamadhan = () => {
         weeklyRemainingTotal += total - distributedTotal;
         weeklyRemainingQuantity += donation.quantity - distributedQuantity;
       }
+
+      // Totaux mensuels (depuis le début du mois)
+      if (donationDate >= startOfMonth) {
+        monthlyTotal += total;
+        monthlyQuantity += donation.quantity;
+
+        monthlyDistributedTotal += distributedTotal;
+        monthlyDistributedQuantity += distributedQuantity;
+        monthlyRemainingTotal += total - distributedTotal;
+        monthlyRemainingQuantity += donation.quantity - distributedQuantity;
+      }
     });
 
     setTotals({
@@ -231,30 +261,58 @@ const DonRamadhan = () => {
       weeklyDistributedTotal,
       weeklyDistributedQuantity,
       weeklyRemainingTotal,
-      weeklyRemainingQuantity
+      weeklyRemainingQuantity,
+      monthlyTotal,
+      monthlyQuantity,
+      monthlyDistributedTotal,
+      monthlyDistributedQuantity,
+      monthlyRemainingTotal,
+      monthlyRemainingQuantity
     });
   };
 
-  useEffect(() => {
-    // Charger les dons depuis localStorage pour la démonstration
-    const savedDonations = localStorage.getItem('ramadhanDonations');
-    if (savedDonations) {
-      let parsed = JSON.parse(savedDonations);
-
-      // Migrate old data format (distributed boolean to distributedQuantity)
-      parsed = parsed.map(donation => ({
-        ...donation,
-        distributedQuantity: donation.distributedQuantity !== undefined
-          ? donation.distributedQuantity
-          : (donation.distributed ? donation.quantity : 0),
-        assignedToRestaurant: donation.assignedToRestaurant || 0,
-        assignedToKouffa: donation.assignedToKouffa || 0
-      }));
-
-      setDonations(parsed);
-      calculateTotals(parsed);
-      setProductTotals(calculateProductTotals(parsed));
+  // Charger les données depuis l'API
+  const loadDonations = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await ramadhanService.getAll();
+      
+      if (response.success) {
+        const donationsData = response.data?.data || response.data || [];
+        setDonations(donationsData);
+        calculateTotals(donationsData);
+        setProductTotals(calculateProductTotals(donationsData));
+        
+        // Vérifier s'il y a des données localStorage à migrer
+        const savedDonations = localStorage.getItem('ramadhanDonations');
+        if (savedDonations) {
+          const migrationResult = await ramadhanService.migrateFromLocalStorage();
+          if (migrationResult.success && migrationResult.migrated > 0) {
+            setSnackbar({
+              open: true,
+              message: `${migrationResult.migrated} dons ont été migrés avec succès vers la base de données`,
+              severity: 'success'
+            });
+            // Recharger les données après migration
+            loadDonations();
+          }
+        }
+      }
+    } catch (err) {
+      setError('Erreur lors du chargement des données');
+      setSnackbar({
+        open: true,
+        message: 'Erreur lors du chargement des données',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    loadDonations();
   }, []);
 
   const handleInputChange = (e) => {
@@ -298,7 +356,7 @@ const DonRamadhan = () => {
     setSelectedDonation(null);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const unitPrice = parseFloat(formData.unitPrice);
     const quantity = parseInt(formData.quantity);
 
@@ -309,34 +367,51 @@ const DonRamadhan = () => {
     }
 
     if (!actualProductName || !unitPrice || !quantity) {
+      setSnackbar({
+        open: true,
+        message: 'Veuillez remplir tous les champs obligatoires',
+        severity: 'error'
+      });
       return;
     }
 
-    const donation = {
-      id: selectedDonation ? selectedDonation.id : Date.now(),
-      productName: actualProductName,
-      unitPrice,
-      quantity,
-      totalPrice: unitPrice * quantity,
-      destination: formData.destination,
-      distributedQuantity: selectedDonation ? selectedDonation.distributedQuantity : 0,
-      assignedToRestaurant: selectedDonation ? selectedDonation.assignedToRestaurant : 0,
-      assignedToKouffa: selectedDonation ? selectedDonation.assignedToKouffa : 0,
-      date: selectedDonation ? selectedDonation.date : new Date().toISOString()
-    };
+    try {
+      const donationData = {
+        productName: actualProductName,
+        category: productOptions.find(opt => opt.value === actualProductName)?.category || 'Non catégorisé',
+        unitPrice,
+        quantity,
+        totalPrice: unitPrice * quantity,
+        destination: formData.destination,
+        distributedQuantity: selectedDonation ? selectedDonation.distributedQuantity : 0,
+        assignedToRestaurant: selectedDonation ? selectedDonation.assignedToRestaurant : 0,
+        assignedToKouffa: selectedDonation ? selectedDonation.assignedToKouffa : 0,
+        donationDate: selectedDonation ? selectedDonation.donationDate : new Date().toISOString()
+      };
 
-    let updatedDonations;
-    if (selectedDonation) {
-      updatedDonations = donations.map(d => d.id === selectedDonation.id ? donation : d);
-    } else {
-      updatedDonations = [...donations, donation];
+      let response;
+      if (selectedDonation) {
+        response = await ramadhanService.update(selectedDonation._id, donationData);
+      } else {
+        response = await ramadhanService.create(donationData);
+      }
+
+      if (response.success) {
+        setSnackbar({
+          open: true,
+          message: selectedDonation ? 'Don mis à jour avec succès' : 'Don créé avec succès',
+          severity: 'success'
+        });
+        loadDonations(); // Recharger les données
+        handleCloseDialog();
+      }
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: 'Erreur lors de l\'enregistrement du don',
+        severity: 'error'
+      });
     }
-
-    setDonations(updatedDonations);
-    localStorage.setItem('ramadhanDonations', JSON.stringify(updatedDonations));
-    calculateTotals(updatedDonations);
-    setProductTotals(calculateProductTotals(updatedDonations));
-    handleCloseDialog();
   };
 
   const handleToggleDistributed = (id) => {
@@ -351,13 +426,25 @@ const DonRamadhan = () => {
     setProductTotals(calculateProductTotals(updatedDonations));
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce don ?')) {
-      const updatedDonations = donations.filter(d => d.id !== id);
-      setDonations(updatedDonations);
-      localStorage.setItem('ramadhanDonations', JSON.stringify(updatedDonations));
-      calculateTotals(updatedDonations);
-      setProductTotals(calculateProductTotals(updatedDonations));
+      try {
+        const response = await ramadhanService.delete(id);
+        if (response.success) {
+          setSnackbar({
+            open: true,
+            message: 'Don supprimé avec succès',
+            severity: 'success'
+          });
+          loadDonations(); // Recharger les données
+        }
+      } catch (err) {
+        setSnackbar({
+          open: true,
+          message: 'Erreur lors de la suppression du don',
+          severity: 'error'
+        });
+      }
     }
   };
 
@@ -972,7 +1059,7 @@ const DonRamadhan = () => {
     }>
       {/* Résumé des totaux */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <Card
             sx={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -1068,7 +1155,7 @@ const DonRamadhan = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <Card
             sx={{
               background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -1157,6 +1244,102 @@ const DonRamadhan = () => {
                   </Typography>
                   <Typography variant="caption" sx={{ opacity: 0.7 }}>
                     {totals.weeklyRemainingQuantity} unités
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Card
+            sx={{
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+              color: 'white',
+              borderRadius: 3,
+              boxShadow: '0 8px 32px rgba(139, 92, 246, 0.3)',
+              transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: '0 12px 40px rgba(139, 92, 246, 0.4)',
+              },
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                width: '100px',
+                height: '100px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '50%',
+                transform: 'translate(30px, -30px)',
+              }
+            }}
+          >
+            <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <CalendarOutlined style={{ fontSize: '24px', marginRight: '12px' }} />
+                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                  Totaux Mensuels
+                </Typography>
+              </Box>
+
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 1, opacity: 0.9 }}>
+                  Total: {totals.monthlyTotal.toFixed(2)} TND
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                  {totals.monthlyQuantity} unités disponibles
+                </Typography>
+              </Box>
+
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Progress de Distribution
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    {totals.monthlyQuantity > 0 ? Math.round((totals.monthlyDistributedQuantity / totals.monthlyQuantity) * 100) : 0}%
+                  </Typography>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={totals.monthlyQuantity > 0 ? (totals.monthlyDistributedQuantity / totals.monthlyQuantity) * 100 : 0}
+                  sx={{
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    '& .MuiLinearProgress-bar': {
+                      backgroundColor: '#4ade80',
+                      borderRadius: 4,
+                    }
+                  }}
+                />
+              </Box>
+
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="body2" sx={{ opacity: 0.8, mb: 0.5 }}>
+                    Distribué
+                  </Typography>
+                  <Typography variant="h6" sx={{ color: '#4ade80', fontWeight: 'bold' }}>
+                    {totals.monthlyDistributedTotal.toFixed(2)} TND
+                  </Typography>
+                  <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                    {totals.monthlyDistributedQuantity} unités
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body2" sx={{ opacity: 0.8, mb: 0.5 }}>
+                    Restant
+                  </Typography>
+                  <Typography variant="h6" sx={{ color: '#fbbf24', fontWeight: 'bold' }}>
+                    {totals.monthlyRemainingTotal.toFixed(2)} TND
+                  </Typography>
+                  <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                    {totals.monthlyRemainingQuantity} unités
                   </Typography>
                 </Box>
               </Box>
@@ -1306,6 +1489,20 @@ const DonRamadhan = () => {
         </Grid>
       </Grid>
 
+      {/* Loading indicator */}
+      {loading && (
+        <Box sx={{ width: '100%', mb: 3 }}>
+          <LinearProgress />
+        </Box>
+      )}
+
+      {/* Error message */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
       {/* Bouton d'ajout */}
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
         <Button
@@ -1322,6 +1519,7 @@ const DonRamadhan = () => {
             });
             setOpenDialog(true);
           }}
+          disabled={loading}
         >
           Ajouter un don
         </Button>
@@ -1352,7 +1550,7 @@ const DonRamadhan = () => {
                 </TableRow>
               ) : (
                 donations.map((donation) => (
-                  <TableRow key={donation.id} hover>
+                  <TableRow key={donation._id || donation.id} hover>
                     <TableCell>{donation.productName}</TableCell>
                     <TableCell>{donation.unitPrice.toFixed(2)} TND</TableCell>
                     <TableCell>{donation.quantity}</TableCell>
@@ -1361,13 +1559,13 @@ const DonRamadhan = () => {
                       <Chip
                         label={
                           donation.destination === 'restaurant' ? 'Restaurant' :
-                          donation.destination === 'kouffa_ramadhan' ? 'Kouffa Ramadan' :
+                          donation.destination === 'kouffa' ? 'Kouffa Ramadan' :
                           'Association'
                         }
                         size="small"
                         color={
                           donation.destination === 'restaurant' ? 'primary' :
-                          donation.destination === 'kouffa_ramadhan' ? 'secondary' :
+                          donation.destination === 'kouffa' ? 'secondary' :
                           'default'
                         }
                       />
@@ -1381,13 +1579,13 @@ const DonRamadhan = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      {new Date(donation.date).toLocaleDateString('fr-FR')}
+                      {new Date(donation.donationDate || donation.date).toLocaleDateString('fr-FR')}
                     </TableCell>
                     <TableCell align="right">
                       <Stack direction="row" spacing={1} justifyContent="flex-end">
                         <Button
                           size="small"
-                          onClick={() => handleToggleDistributed(donation.id)}
+                          onClick={() => handleToggleDistributed(donation._id || donation.id)}
                           color={(donation.distributedQuantity || 0) > 0 ? 'warning' : 'success'}
                           startIcon={(donation.distributedQuantity || 0) > 0 ? <MinusCircleOutlined /> : <CheckCircleOutlined />}
                         >
@@ -1403,7 +1601,7 @@ const DonRamadhan = () => {
                         <Button
                           size="small"
                           color="error"
-                          onClick={() => handleDelete(donation.id)}
+                          onClick={() => handleDelete(donation._id || donation.id)}
                           startIcon={<DeleteOutlined />}
                         >
                           Supprimer
@@ -1988,6 +2186,22 @@ const DonRamadhan = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar pour les notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </MainCard>
   );
 };

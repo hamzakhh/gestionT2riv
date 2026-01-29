@@ -21,7 +21,8 @@ export default defineConfig(({ mode }) => {
       // 🔹 Proxy API (DEV uniquement)
       proxy: {
         '/api': {
-          target: 'https://gestiont2riv-tunisian.onrender.com',
+          //target: 'https://gestiont2riv-tunisian.onrender.com',
+          target: 'http://localhost:5000',
           changeOrigin: true,
           secure: false,
         },

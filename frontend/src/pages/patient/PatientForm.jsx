@@ -33,7 +33,9 @@ const PatientForm = ({ patient, onSubmit, onCancel }) => {
       patientType: patient?.patientType || 'général',
       specificEquipment: patient?.specificEquipment || '',
       entryDate: patient?.entryDate || new Date().toISOString().split('T')[0],
-      photos: patient?.photos || []
+      cinPhoto: null,
+      contractPhoto: null,
+      notebookPhoto: null
     },
     onSubmit: (values) => {
       onSubmit(values);
@@ -144,6 +146,7 @@ const PatientForm = ({ patient, onSubmit, onCancel }) => {
                 onChange={handleChange}
                 onBlur={handleBlur}
               >
+                <MenuItem value="">Aucun</MenuItem>
                 <MenuItem value="Chaise roulante normale">Chaise roulante normale</MenuItem>
                 <MenuItem value="Chaise roulante électrique">Chaise roulante électrique</MenuItem>
                 <MenuItem value="Lève malade">Lève malade</MenuItem>
@@ -156,82 +159,131 @@ const PatientForm = ({ patient, onSubmit, onCancel }) => {
                 <MenuItem value="Canne personne âgée">Canne personne âgée</MenuItem>
                 <MenuItem value="Déambulateur">Déambulateur</MenuItem>
                 <MenuItem value="Coussin orthopédique">Coussin orthopédique</MenuItem>
-                <MenuItem value="Fauteuil confort">Fauteuil confort</MenuItem>
-                <MenuItem value="Lit">Lit</MenuItem>
-                <MenuItem value="Matelas">Matelas</MenuItem>
-                <MenuItem value="Concentrateur d'oxygène">Concentrateur d'oxygène</MenuItem>
+                <MenuItem value="lit">Lit</MenuItem>
+                <MenuItem value="matelas">Matelas</MenuItem>
+                <MenuItem value="concentrateur d'oxygène">Concentrateur d'oxygène</MenuItem>
               </Select>
             </FormControl>
           </Grid>
         )}
         <Grid item xs={12}>
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Box display="flex" alignItems="center" mb={2}>
-              <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                Photos du patient
-              </Typography>
-              <Button 
-                variant="contained" 
-                component="label" 
-                startIcon={<AddPhotoIcon />}
-              >
-                Ajouter des photos
-                <input 
-                  type="file" 
-                  hidden 
-                  multiple
-                  accept="image/*"
-                  onChange={(e) => {
-                    const newPhotos = Array.from(e.target.files).map(file => ({
-                      file,
-                      name: file.name,
-                      preview: URL.createObjectURL(file),
-                      id: Date.now() + Math.random().toString(36).substr(2, 9)
-                    }));
-                    setFieldValue('photos', [...(values.photos || []), ...newPhotos]);
-                  }} 
-                />
-              </Button>
-            </Box>
-
-            {values.photos && values.photos.length > 0 ? (
-              <List dense={true}>
-                {values.photos.map((photo, index) => (
-                  <ListItem key={photo.id || index}>
-                    <ListItemAvatar>
-                      <Avatar 
-                        src={photo.preview || (typeof photo === 'string' ? photo : '')} 
-                        variant="rounded"
-                        sx={{ width: 56, height: 56, mr: 2 }}
-                      />
-                    </ListItemAvatar>
-                    <ListItemText 
-                      primary={photo.name || `Photo ${index + 1}`} 
-                      secondary={photo.size ? `Taille: ${Math.round(photo.size / 1024)} KB` : ''}
+            <Typography variant="h6" component="div" sx={{ mb: 2 }}>
+              Documents du patient
+            </Typography>
+            
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={4}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Photo CIN / Pièce d'identité
+                  </Typography>
+                  <Button 
+                    variant="outlined" 
+                    component="label" 
+                    fullWidth
+                    startIcon={<AddPhotoIcon />}
+                  >
+                    {values.cinPhoto ? 'Changer la photo' : 'Ajouter une photo'}
+                    <input 
+                      type="file" 
+                      hidden 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setFieldValue('cinPhoto', file);
+                      }} 
                     />
-                    <ListItemSecondaryAction>
-                      <IconButton 
-                        edge="end" 
-                        aria-label="supprimer"
-                        onClick={() => {
-                          const newPhotos = [...values.photos];
-                          newPhotos.splice(index, 1);
-                          setFieldValue('photos', newPhotos);
-                        }}
-                      >
-                        <DeleteIcon color="error" />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
-              </List>
-            ) : (
-              <Box textAlign="center" py={3}>
-                <Typography variant="body2" color="textSecondary">
-                  Aucune photo ajoutée. Cliquez sur "Ajouter des photos" pour en sélectionner.
-                </Typography>
-              </Box>
-            )}
+                  </Button>
+                  {values.cinPhoto && (
+                    <Box sx={{ mt: 1, textAlign: 'center' }}>
+                      <Avatar 
+                        src={URL.createObjectURL(values.cinPhoto)}
+                        variant="rounded"
+                        sx={{ width: 80, height: 80, mx: 'auto' }}
+                      />
+                      <Typography variant="caption" display="block">
+                        {values.cinPhoto.name}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Photo du contrat
+                  </Typography>
+                  <Button 
+                    variant="outlined" 
+                    component="label" 
+                    fullWidth
+                    startIcon={<AddPhotoIcon />}
+                  >
+                    {values.contractPhoto ? 'Changer la photo' : 'Ajouter une photo'}
+                    <input 
+                      type="file" 
+                      hidden 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setFieldValue('contractPhoto', file);
+                      }} 
+                    />
+                  </Button>
+                  {values.contractPhoto && (
+                    <Box sx={{ mt: 1, textAlign: 'center' }}>
+                      <Avatar 
+                        src={URL.createObjectURL(values.contractPhoto)}
+                        variant="rounded"
+                        sx={{ width: 80, height: 80, mx: 'auto' }}
+                      />
+                      <Typography variant="caption" display="block">
+                        {values.contractPhoto.name}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Photo du carnet de santé
+                  </Typography>
+                  <Button 
+                    variant="outlined" 
+                    component="label" 
+                    fullWidth
+                    startIcon={<AddPhotoIcon />}
+                  >
+                    {values.notebookPhoto ? 'Changer la photo' : 'Ajouter une photo'}
+                    <input 
+                      type="file" 
+                      hidden 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setFieldValue('notebookPhoto', file);
+                      }} 
+                    />
+                  </Button>
+                  {values.notebookPhoto && (
+                    <Box sx={{ mt: 1, textAlign: 'center' }}>
+                      <Avatar 
+                        src={URL.createObjectURL(values.notebookPhoto)}
+                        variant="rounded"
+                        sx={{ width: 80, height: 80, mx: 'auto' }}
+                      />
+                      <Typography variant="caption" display="block">
+                        {values.notebookPhoto.name}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
           </Paper>
         </Grid>
         <Grid item xs={12}>
