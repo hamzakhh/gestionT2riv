@@ -284,20 +284,6 @@ const DonRamadhan = () => {
         calculateTotals(donationsData);
         setProductTotals(calculateProductTotals(donationsData));
         
-        // Vérifier s'il y a des données localStorage à migrer
-        const savedDonations = localStorage.getItem('ramadhanDonations');
-        if (savedDonations) {
-          const migrationResult = await ramadhanService.migrateFromLocalStorage();
-          if (migrationResult.success && migrationResult.migrated > 0) {
-            setSnackbar({
-              open: true,
-              message: `${migrationResult.migrated} dons ont été migrés avec succès vers la base de données`,
-              severity: 'success'
-            });
-            // Recharger les données après migration
-            loadDonations();
-          }
-        }
       }
     } catch (err) {
       setError('Erreur lors du chargement des données');
@@ -421,7 +407,6 @@ const DonRamadhan = () => {
         : donation
     );
     setDonations(updatedDonations);
-    localStorage.setItem('ramadhanDonations', JSON.stringify(updatedDonations));
     calculateTotals(updatedDonations);
     setProductTotals(calculateProductTotals(updatedDonations));
   };
@@ -487,7 +472,6 @@ const DonRamadhan = () => {
     }
 
     setDonations(updatedDonations);
-    localStorage.setItem('ramadhanDonations', JSON.stringify(updatedDonations));
     calculateTotals(updatedDonations);
     setProductTotals(calculateProductTotals(updatedDonations));
   };
@@ -552,7 +536,6 @@ const DonRamadhan = () => {
     }
 
     setDonations(updatedDonations);
-    localStorage.setItem('ramadhanDonations', JSON.stringify(updatedDonations));
     calculateTotals(updatedDonations);
     setProductTotals(calculateProductTotals(updatedDonations));
   };
