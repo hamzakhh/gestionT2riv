@@ -96,77 +96,98 @@ const emergencyFix = asyncHandler(async (req, res) => {
  * @access  Privé
  */
 const createLoan = asyncHandler(async (req, res) => {
-  const { equipmentId, patientId, expectedReturnDate, notes } = req.body;
-  const userId = req.user.id;
+  try {
+    console.log('Creating loan with body:', req.body);
+    const { equipmentId, patientId, expectedReturnDate, notes } = req.body;
+    const userId = req.user.id;
 
-  // Vérifier que l'équipement est disponible
-  const equipment = await Equipment.findById(equipmentId);
-  if (!equipment) {
-    res.status(404);
-    throw new Error('Équipement non trouvé');
-  }
+    // Vérifier que l'équipement est disponible
+    const equipment = await Equipment.findById(equipmentId);
+    if (!equipment) {
+      console.log('Equipment not found:', equipmentId);
+      res.status(404);
+      throw new Error('Équipement non trouvé');
+    }
 
-  if (equipment.status !== 'available') {
-    res.status(400);
-    throw new Error('Cet équipement n\'est pas disponible pour le prêt');
-  }
+    if (equipment.status !== 'available') {
+      console.log('Equipment not available, status:', equipment.status);
+      res.status(400);
+      throw new Error('Cet équipement n\'est pas disponible pour le prêt');
+    }
 
-  // Vérifier que le patient existe
-  const patient = await Patient.findById(patientId);
-  if (!patient) {
-    res.status(404);
-    throw new Error('Patient non trouvé');
-  }
+    // Vérifier que le patient existe
+    const patient = await Patient.findById(patientId);
+    if (!patient) {
+      console.log('Patient not found:', patientId);
+      res.status(404);
+      throw new Error('Patient non trouvé');
+    }
 
-  // Corriger les activeLoans négatifs avant de continuer
-  if (patient.activeLoans < 0) {
-    console.log(`Correction du patient ${patientId}: activeLoans était ${patient.activeLoans}, mise à 0`);
-    patient.activeLoans = 0;
-    await patient.save();
-  }
+    // Corriger les activeLoans négatifs avant de continuer
+    if (patient.activeLoans < 0) {
+      console.log(`Correction du patient ${patientId}: activeLoans était ${patient.activeLoans}, mise à 0`);
+      patient.activeLoans = 0;
+      await patient.save();
+    }
 
-  // Créer le prêt
-  const loan = await Loan.create({
-    equipment: equipmentId,
-    patient: patientId,
-    expectedReturnDate,
-    conditionBefore: equipment.condition,
-    notes,
-    createdBy: userId,
-    lastUpdatedBy: userId
-  });
+    // Créer le prêt avec expectedReturnDate optionnel
+    const loanData = {
+      equipment: equipmentId,
+      patient: patientId,
+      conditionBefore: equipment.condition,
+      notes,
+      createdBy: userId,
+      lastUpdatedBy: userId
+    };
 
-  // Mettre à jour l'équipement
-  equipment.status = 'borrowed';
-  equipment.currentBorrower = {
-    name: `${patient.firstName} ${patient.lastName}`,
-    phone: patient.phone,
-    address: patient.address,
-    idCard: '',
-    lentDate: new Date()
-  };
-  equipment.loanHistory.push({
-    borrower: {
+    // Ajouter expectedReturnDate seulement s'il est fourni
+    if (expectedReturnDate) {
+      loanData.expectedReturnDate = expectedReturnDate;
+    }
+
+    console.log('Loan data to create:', loanData);
+    const loan = await Loan.create(loanData);
+    console.log('Loan created successfully:', loan._id);
+
+    // Mettre à jour l'équipement
+    equipment.status = 'borrowed';
+    equipment.currentBorrower = {
       name: `${patient.firstName} ${patient.lastName}`,
       phone: patient.phone,
       address: patient.address,
-      idCard: ''
-    },
-    lentDate: new Date(),
-    condition: equipment.condition,
-    lentBy: userId
-  });
-  await equipment.save();
+      idCard: '',
+      lentDate: new Date()
+    };
+    equipment.loanHistory.push({
+      borrower: {
+        name: `${patient.firstName} ${patient.lastName}`,
+        phone: patient.phone,
+        address: patient.address,
+        idCard: ''
+      },
+      lentDate: new Date(),
+      condition: equipment.condition,
+      lentBy: userId
+    });
+    await equipment.save();
 
-  // Mettre à jour le patient
-  patient.borrowedEquipment.push(equipmentId);
-  // Ne pas manipuler activeLoans manuellement - le middleware du Patient s'en charge
-  await patient.save();
+    // Mettre à jour le patient
+    patient.borrowedEquipment.push(equipmentId);
+    // Ne pas manipuler activeLoans manuellement - le middleware du Patient s'en charge
+    await patient.save();
 
-  res.status(201).json({
-    success: true,
-    data: loan
-  });
+    res.status(201).json({
+      success: true,
+      data: loan
+    });
+  } catch (error) {
+    console.error('Error in createLoan:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Erreur lors de la création du prêt',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 });
 
 /**
@@ -419,9 +440,9 @@ const getActiveLoans = asyncHandler(async (req, res) => {
     
 
     
-    // Get paginated loans
+    // Get paginated loans - trier par startDate si expectedReturnDate est null
     const loans = await Loan.find({ status: LOAN_STATUS.ACTIVE })
-      .sort({ expectedReturnDate: 1 })
+      .sort({ startDate: 1 }) // Changé de expectedReturnDate à startDate
       .skip(skip)
       .limit(parseInt(limit))
       .populate([
@@ -523,10 +544,10 @@ const getLoanStats = asyncHandler(async (req, res) => {
     // Nombre de prêts actifs
     Loan.countDocuments({ status: LOAN_STATUS.ACTIVE }),
     
-    // Nombre de prêts en retard
+    // Nombre de prêts en retard (uniquement ceux avec une date de retour définie)
     Loan.countDocuments({
       status: LOAN_STATUS.ACTIVE,
-      expectedReturnDate: { $lt: new Date() }
+      expectedReturnDate: { $exists: true, $lt: new Date() }
     }),
     
     // Statistiques par type d'équipement

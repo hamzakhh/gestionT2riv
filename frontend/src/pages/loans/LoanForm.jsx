@@ -49,9 +49,10 @@ import patientService from 'api/patientService';
 const validationSchema = Yup.object({
   equipmentId: Yup.string().required('L\'équipement est requis'),
   patientId: Yup.string().required('Le patient est requis'),
-  startDate: Yup.date().required('La date de début est requisse'),
+  startDate: Yup.date().required('La date de début est requise'),
   expectedReturnDate: Yup.date()
-    .required('La date de retour prévue est requise')
+    .nullable()
+    .optional()
     .min(Yup.ref('startDate'), 'La date de retour doit être postérieure à la date de début'),
   notes: Yup.string()
 });
@@ -169,7 +170,7 @@ const LoanForm = () => {
       equipmentId: '',
       patientId: '',
       startDate: new Date(),
-      expectedReturnDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 jours par défaut
+      expectedReturnDate: null, // Rend la date de retour optionnelle
       notes: ''
     },
     validationSchema,
@@ -182,11 +183,15 @@ const LoanForm = () => {
         const loanData = {
           ...values,
           startDate: values.startDate.toISOString(),
-          expectedReturnDate: values.expectedReturnDate.toISOString()
+          expectedReturnDate: values.expectedReturnDate ? values.expectedReturnDate.toISOString() : null
         };
+
+        console.log('Submitting loan data:', loanData);
 
         // Appeler le service pour créer le prêt
         const response = await loanService.createLoan(loanData);
+        
+        console.log('Loan creation response:', response);
         
         // Rediriger vers la page de détail du prêt
         navigate(`/loans/${response.data._id}`, { 
@@ -194,6 +199,7 @@ const LoanForm = () => {
         });
       } catch (err) {
         console.error('Erreur lors de la création du prêt:', err);
+        console.error('Error response:', err.response?.data);
         setError(err.response?.data?.message || 'Une erreur est survenue lors de la création du prêt');
       } finally {
         setSubmitting(false);
@@ -203,11 +209,8 @@ const LoanForm = () => {
 
   // Mettre à jour la date de retour minimale lorsque la date de début change
   useEffect(() => {
-    if (formik.values.startDate && !formik.values.expectedReturnDate) {
-      const defaultReturnDate = new Date(formik.values.startDate);
-      defaultReturnDate.setDate(defaultReturnDate.getDate() + 30); // 30 jours par défaut
-      formik.setFieldValue('expectedReturnDate', defaultReturnDate);
-    }
+    // Ne plus définir automatiquement la date de retour
+    // Laisser l'utilisateur décider s'il veut spécifier une date
   }, [formik.values.startDate]);
 
   if (loading) {
@@ -415,7 +418,7 @@ const LoanForm = () => {
                     </Grid>
                     <Grid item xs={12} md={6}>
                       <DatePicker
-                        label="Date de retour prévue *"
+                        label="Date de retour prévue (optionnelle)"
                         value={formik.values.expectedReturnDate}
                         onChange={(date) => formik.setFieldValue('expectedReturnDate', date, true)}
                         minDate={formik.values.startDate}
@@ -425,6 +428,7 @@ const LoanForm = () => {
                             fullWidth
                             error={formik.touched.expectedReturnDate && Boolean(formik.errors.expectedReturnDate)}
                             helperText={formik.touched.expectedReturnDate && formik.errors.expectedReturnDate}
+                            placeholder="Laisser vide si indéterminé"
                           />
                         )}
                       />
@@ -435,7 +439,7 @@ const LoanForm = () => {
                 <Box mt={2} display="flex" alignItems="center">
                   <InfoIcon color="info" fontSize="small" sx={{ mr: 1 }} />
                   <Typography variant="caption" color="textSecondary">
-                    La durée maximale de prêt est de 90 jours. Des rappels seront envoyés avant la date de retour.
+                    La date de retour est optionnelle. L'équipement sera retourné lorsque le patient terminera son utilisation.
                   </Typography>
                 </Box>
               </Grid>

@@ -22,7 +22,7 @@ const loanSchema = new mongoose.Schema({
   },
   expectedReturnDate: {
     type: Date,
-    required: [true, 'La date de retour prévue est requise']
+    required: false // Rendu optionnel
   },
   actualReturnDate: Date,
   status: {
@@ -69,7 +69,8 @@ const loanSchema = new mongoose.Schema({
 });
 
 // Index pour les requêtes fréquentes
-loanSchema.index({ status: 1, expectedReturnDate: 1 });
+loanSchema.index({ status: 1 });
+loanSchema.index({ expectedReturnDate: 1 }, { sparse: true }); // Index partiel car le champ est optionnel
 loanSchema.index({ patient: 1, status: 1 });
 loanSchema.index({ equipment: 1, status: 1 });
 
