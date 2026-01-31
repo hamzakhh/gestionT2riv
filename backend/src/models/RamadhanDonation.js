@@ -102,9 +102,12 @@ ramadhanDonationSchema.pre('save', function(next) {
   }
   
   // Valider que les quantités distribuées ne dépassent pas la quantité totale
-  const totalAssigned = this.distributedQuantity + this.assignedToRestaurant + this.assignedToKouffa;
-  if (totalAssigned > this.quantity) {
-    return next(new Error('La quantité totale distribuée ne peut pas dépasser la quantité disponible'));
+  // Seulement si c'est un nouveau document ou si les quantités ont été modifiées
+  if (this.isNew || this.isModified('distributedQuantity') || this.isModified('assignedToRestaurant') || this.isModified('assignedToKouffa')) {
+    const totalAssigned = this.distributedQuantity + this.assignedToRestaurant + this.assignedToKouffa;
+    if (totalAssigned > this.quantity) {
+      return next(new Error('La quantité totale distribuée ne peut pas dépasser la quantité disponible'));
+    }
   }
   
   next();

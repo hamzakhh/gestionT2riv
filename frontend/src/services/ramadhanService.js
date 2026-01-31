@@ -1,22 +1,51 @@
 import axios from '../utils/axios.js';
 
+// Helper function to handle rate limiting with exponential backoff
+const waitForRetry = async (retryCount) => {
+  const delay = Math.min(1000 * Math.pow(2, retryCount), 10000); // Max 10 seconds
+  return new Promise(resolve => setTimeout(resolve, delay));
+};
+
+const makeRequest = async (requestFn, retries = 3) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await requestFn();
+    } catch (error) {
+      // If rate limited (429), wait and retry
+      if (error.response?.status === 429 && i < retries - 1) {
+        console.warn(`Rate limited, retrying in ${Math.min(1000 * Math.pow(2, i), 10000)}ms...`);
+        await waitForRetry(i);
+        continue;
+      }
+      // For other errors or final retry, throw the error
+      throw error;
+    }
+  }
+};
+
 const ramadhanService = {
   // Obtenir tous les dons Ramadhan
   getAll: async (params = {}) => {
-    const response = await axios.get('/ramadhan', { params });
-    return response.data;
+    return await makeRequest(async () => {
+      const response = await axios.get('/ramadhan', { params });
+      return response.data;
+    });
   },
 
   // Obtenir un don Ramadhan par ID
   getById: async (id) => {
-    const response = await axios.get(`/ramadhan/${id}`);
-    return response.data;
+    return await makeRequest(async () => {
+      const response = await axios.get(`/ramadhan/${id}`);
+      return response.data;
+    });
   },
 
   // Créer un nouveau don Ramadhan
   create: async (data) => {
-    const response = await axios.post('/ramadhan', data);
-    return response.data;
+    return await makeRequest(async () => {
+      const response = await axios.post('/ramadhan', data);
+      return response.data;
+    });
   },
 
   // Mettre à jour un don Ramadhan
@@ -27,8 +56,10 @@ const ramadhanService = {
 
   // Supprimer un don Ramadhan
   delete: async (id) => {
-    const response = await axios.delete(`/ramadhan/${id}`);
-    return response.data;
+    return await makeRequest(async () => {
+      const response = await axios.delete(`/ramadhan/${id}`);
+      return response.data;
+    });
   },
 
   // Mettre à jour la distribution d'un don
@@ -61,6 +92,22 @@ const ramadhanService = {
       let migratedCount = 0;
       let errors = [];
 
+      // Get current user info from localStorage or auth context
+      const getCurrentUser = () => {
+        try {
+          const userStr = localStorage.getItem('user');
+          if (userStr) {
+            const user = JSON.parse(userStr);
+            return user._id || user.id;
+          }
+        } catch (e) {
+          console.warn('Could not get user from localStorage');
+        }
+        return null;
+      };
+
+      const currentUserId = getCurrentUser();
+
       for (const donation of donations) {
         try {
           // Transformer les données au format attendu par l'API
@@ -76,7 +123,17 @@ const ramadhanService = {
             assignedToKouffa: donation.assignedToKouffa || 0,
             donationDate: donation.date ? new Date(donation.date) : new Date(),
             notes: donation.notes || '',
+            // createdBy will be set automatically by the backend middleware
           };
+
+          // Skip migration if no user is authenticated
+          if (!currentUserId) {
+            errors.push({
+              productName: donation.productName,
+              error: 'Utilisateur non authentifié - impossible de migrer'
+            });
+            continue;
+          }
 
           await ramadhanService.create(apiData);
           migratedCount++;

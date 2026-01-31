@@ -103,6 +103,15 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limiting plus permissif pour les routes Ramadhan (migration)
+const ramadhanLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // 30 requêtes par minute pour permettre la migration
+  message: 'Trop de requêtes Ramadhan. Veuillez réessayer plus tard.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use('/api', limiter);
 
 // -----------------------
@@ -179,7 +188,7 @@ registerRoutes('/orphans', orphanRoutes);
 registerRoutes('/donors', donorRoutes);
 registerRoutes('/donations', donationRoutes);
 registerRoutes('/loans', loanRoutes);
-registerRoutes('/ramadhan', ramadhanRoutes);
+app.use('/api/ramadhan', ramadhanLimiter, ramadhanRoutes);
 registerRoutes('/zakat', zakatRoutes);
 
 // Compatibilité v1
