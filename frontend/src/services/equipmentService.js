@@ -145,6 +145,41 @@ const equipmentService = {
         data: []
       };
     }
+  },
+
+  // Obtenir l'historique complet d'un équipement par ID
+  getEquipmentHistory: async (id) => {
+    try {
+      // Vérifier si l'ID est un ID MongoDB valide (24 caractères hexadécimaux)
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      
+      let response;
+      if (isValidObjectId) {
+        // Si c'est un ID MongoDB, utiliser la route directe
+        response = await axios.get(`/equipment/${id}/history`);
+      } else {
+        // Sinon, rechercher par numéro de série
+        // D'abord trouver l'équipement par numéro de série
+        const searchResponse = await axios.get('/equipment', { 
+          params: { 
+            search: id,
+            limit: 1 
+          } 
+        });
+        
+        if (searchResponse.data && searchResponse.data.data && searchResponse.data.data.length > 0) {
+          const equipmentId = searchResponse.data.data[0]._id;
+          response = await axios.get(`/equipment/${equipmentId}/history`);
+        } else {
+          throw new Error('Équipement non trouvé avec ce numéro de série');
+        }
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching equipment history:', error);
+      throw error;
+    }
   }
 };
 

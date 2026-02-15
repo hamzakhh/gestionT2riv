@@ -10,7 +10,8 @@ import {
   lendEquipment,
   returnEquipmentItem,
   addMaintenance,
-  getEquipmentStats
+  getEquipmentStats,
+  getEquipmentHistory
 } from '../controllers/equipmentController.js';
 
 // Toutes les routes nécessitent une authentification
@@ -35,6 +36,13 @@ router.get('/stats', getEquipmentStats);
 
 // Route pour la liste des équipements (avec filtrage optionnel via query params)
 router.get('/', getAllEquipment);
+
+// Route pour l'historique d'un équipement (doit être avant /:id)
+router.get('/:id/history', (req, res, next) => {
+  console.log('Route history appelée avec ID:', req.params.id);
+  console.log('URL complète:', req.originalUrl);
+  return getEquipmentHistory(req, res, next);
+});
 
 // Route pour un équipement spécifique (doit être après les autres routes GET)
 router.get('/:id', getEquipmentById);

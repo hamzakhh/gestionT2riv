@@ -444,3 +444,90 @@ export const getEquipmentStats = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * @desc    Obtenir l'historique complet d'un équipement
+ * @route   GET /api/equipment/:id/history
+ * @access  Private
+ */
+export const getEquipmentHistory = async (req, res, next) => {
+  try {
+    console.log('=== DÉBUT getEquipmentHistory ===');
+    console.log('ID reçu:', req.params.id);
+    console.log('URL originale:', req.originalUrl);
+    
+    const equipment = await Equipment.findById(req.params.id)
+      .populate('createdBy', 'firstName lastName email')
+      .populate('loanHistory.lentBy', 'firstName lastName email')
+      .populate('loanHistory.returnedBy', 'firstName lastName email')
+      .populate('maintenanceHistory.performedBy', 'firstName lastName email')
+      .populate('assignedUserId', 'firstName lastName email role');
+
+    console.log('Équipement trouvé:', equipment ? 'Oui' : 'Non');
+
+    if (!equipment) {
+      console.log('Équipement non trouvé avec l\'ID:', req.params.id);
+      return res.status(404).json({
+        success: false,
+        message: 'Équipement non trouvé',
+      });
+    }
+
+    // Formatter l'historique pour une meilleure présentation
+    const history = {
+      equipment: {
+        _id: equipment._id,
+        name: equipment.name,
+        category: equipment.category,
+        type: equipment.type,
+        serialNumber: equipment.serialNumber,
+        status: equipment.status,
+        condition: equipment.condition,
+        entryDate: equipment.entryDate,
+        createdAt: equipment.createdAt,
+        updatedAt: equipment.updatedAt,
+        createdBy: equipment.createdBy,
+        assignedUserId: equipment.assignedUserId,
+        notes: equipment.notes
+      },
+      loanHistory: equipment.loanHistory.map(loan => ({
+        borrower: loan.borrower,
+        lentDate: loan.lentDate,
+        returnDate: loan.returnDate,
+        condition: loan.condition,
+        notes: loan.notes,
+        lentBy: loan.lentBy,
+        returnedBy: loan.returnedBy,
+        duration: loan.returnDate ? 
+          Math.ceil((loan.returnDate - loan.lentDate) / (1000 * 60 * 60 * 24)) : 
+          Math.ceil((new Date() - loan.lentDate) / (1000 * 60 * 60 * 24))
+      })),
+      maintenanceHistory: equipment.maintenanceHistory.map(maintenance => ({
+        date: maintenance.date,
+        description: maintenance.description,
+        cost: maintenance.cost,
+        performedBy: maintenance.performedBy
+      })),
+      currentBorrower: equipment.currentBorrower,
+      statistics: {
+        totalLoans: equipment.loanHistory.length,
+        activeLoans: equipment.loanHistory.filter(loan => !loan.returnDate).length,
+        totalMaintenance: equipment.maintenanceHistory.length,
+        averageLoanDuration: equipment.loanHistory.length > 0 ? 
+          Math.round(
+            equipment.loanHistory
+              .filter(loan => loan.returnDate)
+              .reduce((sum, loan) => sum + Math.ceil((loan.returnDate - loan.lentDate) / (1000 * 60 * 60 * 24)), 0) / 
+            equipment.loanHistory.filter(loan => loan.returnDate).length
+          ) : 0
+      }
+    };
+
+    res.status(200).json({
+      success: true,
+      data: history,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

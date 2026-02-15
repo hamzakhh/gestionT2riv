@@ -400,10 +400,44 @@ const EquipmentList = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [page, setPage] = useState(0);
   const [pagination, setPagination] = useState(null);
+  const [historySearchId, setHistorySearchId] = useState('');
+  const [equipmentHistory, setEquipmentHistory] = useState(null);
+  const [openHistoryDialog, setOpenHistoryDialog] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState('');
 
   // Fonction pour gérer le prêt d'un équipement
   const handleLendEquipment = (equipmentId) => {
     navigate(`/loans/new?equipmentId=${equipmentId}`);
+  };
+
+  // Fonction pour rechercher l'historique d'un équipement par ID
+  const handleSearchHistory = async () => {
+    if (!historySearchId.trim()) {
+      setHistoryError('Veuillez entrer un ID d\'équipement');
+      return;
+    }
+
+    try {
+      setHistoryLoading(true);
+      setHistoryError('');
+      const response = await equipmentService.getEquipmentHistory(historySearchId.trim());
+      setEquipmentHistory(response.data);
+      setOpenHistoryDialog(true);
+    } catch (error) {
+      console.error('Erreur lors de la recherche de l\'historique:', error);
+      setHistoryError(error.response?.data?.message || 'Équipement non trouvé ou erreur lors de la récupération de l\'historique');
+      setEquipmentHistory(null);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Fonction pour gérer la touche Entrée dans le champ de recherche
+  const handleHistorySearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearchHistory();
+    }
   };
   const [rowsPerPage, setRowsPerPage] = useState(100000);
   const [users, setUsers] = useState([]);
@@ -1307,6 +1341,120 @@ const EquipmentList = () => {
             </Grid>
           </Grid>
         </MainCard>
+      </Grid>
+
+      {/* Equipment History Search Section */}
+      <Grid item xs={12}>
+        <ModernMainCard>
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h5" fontWeight={600} color="primary" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+              <SearchOutlined style={{ fontSize: '28px' }} />
+              Consultation d'Historique d'Équipement
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Entrez l'ID MongoDB (24 caractères hexadécimaux) ou le numéro de série d'un équipement pour consulter son historique complet
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+              <TextField
+                placeholder="ID MongoDB ou numéro de série..."
+                variant="outlined"
+                size="small"
+                value={historySearchId}
+                onChange={(e) => setHistorySearchId(e.target.value)}
+                onKeyPress={handleHistorySearchKeyPress}
+                sx={{
+                  flex: 1,
+                  minWidth: '300px',
+                  maxWidth: '500px',
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'background.paper',
+                    borderRadius: '12px',
+                    fontFamily: 'monospace',
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'primary.light',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderWidth: '2px',
+                      borderColor: 'primary.main',
+                    },
+                  },
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchOutlined style={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: historySearchId && (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => setHistorySearchId('')}
+                        sx={{ color: 'text.secondary' }}
+                      >
+                        <StopOutlined style={{ fontSize: '16px' }} />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <Button
+                variant="contained"
+                onClick={handleSearchHistory}
+                disabled={historyLoading || !historySearchId.trim()}
+                startIcon={historyLoading ? (
+                  <Box
+                    sx={{
+                      width: 16,
+                      height: 16,
+                      border: '2px solid rgba(255, 255, 255, 0.3)',
+                      borderTop: '2px solid white',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': {
+                        '0%': { transform: 'rotate(0deg)' },
+                        '100%': { transform: 'rotate(360deg)' }
+                      }
+                    }}
+                  />
+                ) : <SearchOutlined />}
+                sx={{
+                  borderRadius: '12px',
+                  px: 4,
+                  py: 1.5,
+                  fontWeight: 600,
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
+                  boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5855eb 0%, #7c3aed 50%, #db2777 100%)',
+                    boxShadow: '0 6px 25px rgba(99, 102, 241, 0.4)',
+                    transform: 'translateY(-2px)',
+                  },
+                  '&:disabled': {
+                    background: 'rgba(156, 163, 175, 0.5)',
+                    color: 'rgba(255, 255, 255, 0.7)',
+                  }
+                }}
+              >
+                {historyLoading ? 'Recherche...' : 'Consulter l\'historique'}
+              </Button>
+            </Box>
+            {historyError && (
+              <Box sx={{ 
+                mt: 2, 
+                p: 2, 
+                backgroundColor: '#ffebee', 
+                borderRadius: 1,
+                borderLeft: '4px solid #f44336'
+              }}>
+                <Typography variant="subtitle2" color="error">
+                  {historyError}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </ModernMainCard>
       </Grid>
 
       <Grid item xs={12}>
@@ -2314,6 +2462,293 @@ const EquipmentList = () => {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Equipment History Dialog */}
+      <Dialog
+        open={openHistoryDialog}
+        onClose={() => setOpenHistoryDialog(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            maxHeight: '90vh'
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
+            color: 'white',
+            textAlign: 'center',
+            py: 3,
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '4px',
+              background: 'linear-gradient(90deg, #fbbf24, #f59e0b, #d97706)',
+            }
+          }}
+        >
+          <Box display="flex" alignItems="center" justifyContent="center" gap={2}>
+            <SearchOutlined style={{ fontSize: '28px' }} />
+            <Typography variant="h5" fontWeight={700}>
+              Historique de l'Équipement
+            </Typography>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 4 }}>
+          {equipmentHistory && (
+            <Box>
+              {/* Equipment Information */}
+              <Card sx={{ mb: 3, borderRadius: 2, background: 'rgba(99, 102, 241, 0.05)' }}>
+                <CardContent>
+                  <Typography variant="h6" fontWeight={600} color="primary" sx={{ mb: 2 }}>
+                    📋 Informations de l'Équipement
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" color="text.secondary">Nom:</Typography>
+                      <Typography variant="body1" fontWeight={500}>{equipmentHistory.equipment.name}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" color="text.secondary">ID:</Typography>
+                      <Typography variant="body1" fontWeight={500} fontFamily="monospace">{equipmentHistory.equipment._id}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" color="text.secondary">Catégorie:</Typography>
+                      <Typography variant="body1" fontWeight={500}>{equipmentHistory.equipment.category}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" color="text.secondary">Type:</Typography>
+                      <Typography variant="body1" fontWeight={500}>{equipmentHistory.equipment.type}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" color="text.secondary">Numéro de série:</Typography>
+                      <Typography variant="body1" fontWeight={500} fontFamily="monospace">{equipmentHistory.equipment.serialNumber}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" color="text.secondary">Statut actuel:</Typography>
+                      <Chip 
+                        label={equipmentHistory.equipment.status === 'available' ? 'Disponible' : 
+                               equipmentHistory.equipment.status === 'borrowed' ? 'Prêté' :
+                               equipmentHistory.equipment.status === 'maintenance' ? 'En maintenance' :
+                               equipmentHistory.equipment.status === 'decommissioned' ? 'Hors service' :
+                               equipmentHistory.equipment.status === 'lost' ? 'Perdu' : 'Indisponible'}
+                        color={equipmentHistory.equipment.status === 'available' ? 'success' :
+                               equipmentHistory.equipment.status === 'borrowed' ? 'info' :
+                               equipmentHistory.equipment.status === 'maintenance' ? 'warning' :
+                               equipmentHistory.equipment.status === 'decommissioned' ? 'error' :
+                               equipmentHistory.equipment.status === 'lost' ? 'error' : 'default'}
+                        size="small"
+                      />
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+
+              {/* Statistics */}
+              <Card sx={{ mb: 3, borderRadius: 2, background: 'rgba(34, 197, 94, 0.05)' }}>
+                <CardContent>
+                  <Typography variant="h6" fontWeight={600} color="success.main" sx={{ mb: 2 }}>
+                    📊 Statistiques
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6} md={3}>
+                      <Box textAlign="center">
+                        <Typography variant="h4" color="primary" fontWeight={700}>{equipmentHistory.statistics.totalLoans}</Typography>
+                        <Typography variant="body2" color="text.secondary">Total des prêts</Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6} md={3}>
+                      <Box textAlign="center">
+                        <Typography variant="h4" color="warning.main" fontWeight={700}>{equipmentHistory.statistics.activeLoans}</Typography>
+                        <Typography variant="body2" color="text.secondary">Prêts actifs</Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6} md={3}>
+                      <Box textAlign="center">
+                        <Typography variant="h4" color="info.main" fontWeight={700}>{equipmentHistory.statistics.totalMaintenance}</Typography>
+                        <Typography variant="body2" color="text.secondary">Maintenances</Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6} md={3}>
+                      <Box textAlign="center">
+                        <Typography variant="h4" color="success.main" fontWeight={700}>{equipmentHistory.statistics.averageLoanDuration}</Typography>
+                        <Typography variant="body2" color="text.secondary">Durée moyenne (jours)</Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+
+              {/* Loan History */}
+              {equipmentHistory.loanHistory.length > 0 && (
+                <Card sx={{ mb: 3, borderRadius: 2 }}>
+                  <CardContent>
+                    <Typography variant="h6" fontWeight={600} color="primary" sx={{ mb: 2 }}>
+                      📅 Historique des Prêts
+                    </Typography>
+                    <Box sx={{ maxHeight: '300px', overflowY: 'auto' }}>
+                      {equipmentHistory.loanHistory.map((loan, index) => (
+                        <Card key={index} variant="outlined" sx={{ mb: 2, borderRadius: 1 }}>
+                          <CardContent sx={{ p: 2 }}>
+                            <Grid container spacing={2}>
+                              <Grid item xs={12} md={6}>
+                                <Typography variant="body2" color="text.secondary">Emprunteur:</Typography>
+                                <Typography variant="body1" fontWeight={500}>
+                                  {loan.borrower.name} - {loan.borrower.phone}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  📍 {loan.borrower.address}
+                                </Typography>
+                              </Grid>
+                              <Grid item xs={12} md={6}>
+                                <Typography variant="body2" color="text.secondary">Dates:</Typography>
+                                <Typography variant="body2">
+                                  📅 Début: {new Date(loan.lentDate).toLocaleDateString()}
+                                </Typography>
+                                {loan.returnDate && (
+                                  <Typography variant="body2">
+                                    ✅ Retour: {new Date(loan.returnDate).toLocaleDateString()}
+                                  </Typography>
+                                )}
+                                <Typography variant="body2" color="primary">
+                                  ⏱️ Durée: {loan.duration} jours
+                                </Typography>
+                              </Grid>
+                              {loan.notes && (
+                                <Grid item xs={12}>
+                                  <Typography variant="body2" color="text.secondary">Notes:</Typography>
+                                  <Typography variant="body2">{loan.notes}</Typography>
+                                </Grid>
+                              )}
+                            </Grid>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </Box>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Maintenance History */}
+              {equipmentHistory.maintenanceHistory.length > 0 && (
+                <Card sx={{ mb: 3, borderRadius: 2 }}>
+                  <CardContent>
+                    <Typography variant="h6" fontWeight={600} color="primary" sx={{ mb: 2 }}>
+                      🔧 Historique des Maintenances
+                    </Typography>
+                    <Box sx={{ maxHeight: '300px', overflowY: 'auto' }}>
+                      {equipmentHistory.maintenanceHistory.map((maintenance, index) => (
+                        <Card key={index} variant="outlined" sx={{ mb: 2, borderRadius: 1 }}>
+                          <CardContent sx={{ p: 2 }}>
+                            <Grid container spacing={2}>
+                              <Grid item xs={12} md={6}>
+                                <Typography variant="body2" color="text.secondary">Date:</Typography>
+                                <Typography variant="body1" fontWeight={500}>
+                                  📅 {new Date(maintenance.date).toLocaleDateString()}
+                                </Typography>
+                                {maintenance.performedBy && (
+                                  <Typography variant="body2" color="text.secondary">
+                                    👤 Par: {maintenance.performedBy.firstName} {maintenance.performedBy.lastName}
+                                  </Typography>
+                                )}
+                              </Grid>
+                              <Grid item xs={12} md={6}>
+                                <Typography variant="body2" color="text.secondary">Coût:</Typography>
+                                <Typography variant="body1" fontWeight={500} color="success.main">
+                                  💰 {maintenance.cost ? `${maintenance.cost} €` : 'Non spécifié'}
+                                </Typography>
+                              </Grid>
+                              <Grid item xs={12}>
+                                <Typography variant="body2" color="text.secondary">Description:</Typography>
+                                <Typography variant="body2">{maintenance.description}</Typography>
+                              </Grid>
+                            </Grid>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </Box>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Current Borrower */}
+              {equipmentHistory.currentBorrower && (
+                <Card sx={{ mb: 3, borderRadius: 2, background: 'rgba(255, 152, 0, 0.05)' }}>
+                  <CardContent>
+                    <Typography variant="h6" fontWeight={600} color="warning.main" sx={{ mb: 2 }}>
+                      🔄 Emprunteur Actuel
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="text.secondary">Nom:</Typography>
+                        <Typography variant="body1" fontWeight={500}>{equipmentHistory.currentBorrower.name}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="text.secondary">Téléphone:</Typography>
+                        <Typography variant="body1" fontWeight={500}>{equipmentHistory.currentBorrower.phone}</Typography>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="text.secondary">Adresse:</Typography>
+                        <Typography variant="body2">{equipmentHistory.currentBorrower.address}</Typography>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="text.secondary">Date du prêt:</Typography>
+                        <Typography variant="body2">
+                          📅 {new Date(equipmentHistory.currentBorrower.lentDate).toLocaleDateString()}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions
+          sx={{
+            p: 4,
+            pt: 2,
+            gap: 2,
+            justifyContent: 'space-between',
+            backgroundColor: 'rgba(248, 250, 252, 0.8)',
+            backdropFilter: 'blur(10px)',
+            borderTop: '1px solid rgba(0, 0, 0, 0.08)',
+          }}
+        >
+          <Button
+            onClick={() => setOpenHistoryDialog(false)}
+            variant="outlined"
+            sx={{
+              borderRadius: '12px',
+              px: 4,
+              py: 1.5,
+              fontWeight: 600,
+              borderColor: 'rgba(0, 0, 0, 0.12)',
+              color: 'text.secondary',
+              '&:hover': {
+                borderColor: 'rgba(0, 0, 0, 0.24)',
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              }
+            }}
+          >
+            <StopOutlined style={{ marginRight: '8px' }} />
+            Fermer
+          </Button>
+        </DialogActions>
       </Dialog>
     </Grid>
   );

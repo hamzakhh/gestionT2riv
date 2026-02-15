@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PlusOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, MinusCircleOutlined, CalendarOutlined, ClockCircleOutlined, PrinterOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, MinusCircleOutlined, CalendarOutlined, ClockCircleOutlined, PrinterOutlined, DownloadOutlined, HistoryOutlined } from '@ant-design/icons';
 import {
   Box,
   Button,
@@ -27,78 +27,60 @@ import {
   Chip,
   Alert,
   LinearProgress,
-  Snackbar
+  Snackbar,
+  Pagination
 } from '@mui/material';
 import MainCard from 'components/MainCard';
 import logo from 'assets/images/t2riv-logo.jpg';
 import ramadhanService from '../../services/ramadhanService.js';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const DonRamadhan = () => {
-  // Options de produits prédéfinis
+  // Options de produits prédéfinis avec prix par défaut
   const productOptions = [
     // الأساسيات (المواد الجافة) - Les bases (matières sèches)
-    { value: 'دقيق (فرينة)', label: 'دقيق (فرينة)', category: 'الأساسيات (المواد الجافة)' },
-    { value: 'سميد', label: 'سميد', category: 'الأساسيات (المواد الجافة)' },
-    { value: 'أرز', label: 'أرز', category: 'الأساسيات (المواد الجافة)' },
-    { value: 'كسكسي', label: 'كسكسي', category: 'الأساسيات (المواد الجافة)' },
-    { value: 'شعيرية', label: 'شعيرية', category: 'الأساسيات (المواد الجافة)' },
-    { value: 'مقرونة (مكرونة)', label: 'مقرونة (مكرونة)', category: 'الأساسيات (المواد الجافة)' },
-    { value: 'عدس', label: 'عدس', category: 'الأساسيات (المواد الجافة)' },
-    { value: 'لوبيا (فاصوليا)', label: 'لوبيا (فاصوليا)', category: 'الأساسيات (المواد الجافة)' },
-    { value: 'حمص', label: 'حمص', category: 'الأساسيات (المواد الجافة)' },
-    { value: 'فول', label: 'فول', category: 'الأساسيات (المواد الجافة)' },
-    { value: 'رز بالحليب', label: 'رز بالحليب', category: 'الأساسيات (المواد الجافة)' },
-    { value: 'برغل', label: 'برغل', category: 'الأساسيات (المواد الجافة)' },
+    { value: 'دقيق (فرينة)', label: 'دقيق (فرينة)', category: 'الأساسيات (المواد الجافة)', defaultPrice: 0.850 },
+    { value: 'سميد', label: 'سميد', category: 'الأساسيات (المواد الجافة)', defaultPrice: 0.800 },
+    { value: 'أرز', label: 'أرز', category: 'الأساسيات (المواد الجافة)', defaultPrice: 3.500 },
+    { value: 'كسكسي', label: 'كسكسي', category: 'الأساسيات (المواد الجافة)', defaultPrice: 0.800 },
+        { value: 'مسفوف', label: 'مسفوف', category: 'الأساسيات (المواد الجافة)', defaultPrice: 0.800 },
 
+    { value: 'شعيرية', label: 'شعيرية', category: 'الأساسيات (المواد الجافة)', defaultPrice: 0.410 },
+    { value: 'مقرونة (مكرونة)', label: 'مقرونة (مكرونة)', category: 'الأساسيات (المواد الجافة)', defaultPrice: 0.410 },
+  
     // المواد الغذائية الأساسية - Matières alimentaires de base
-    { value: 'سكر', label: 'سكر', category: 'المواد الغذائية الأساسية' },
-    { value: 'ملح', label: 'ملح', category: 'المواد الغذائية الأساسية' },
-    { value: 'زيت نباتي', label: 'زيت نباتي', category: 'المواد الغذائية الأساسية' },
-    { value: 'زيت زيتون', label: 'زيت زيتون', category: 'المواد الغذائية الأساسية' },
-    { value: 'طماطم معجونة', label: 'طماطم معجونة', category: 'المواد الغذائية الأساسية' },
-    { value: 'حليب', label: 'حليب', category: 'المواد الغذائية الأساسية' },
-    { value: 'شاي', label: 'شاي', category: 'المواد الغذائية الأساسية' },
-    { value: 'قهوة', label: 'قهوة', category: 'المواد الغذائية الأساسية' },
-    { value: 'خميرة', label: 'خميرة', category: 'المواد الغذائية الأساسية' },
-    { value: 'ماء ورد', label: 'ماء ورد', category: 'المواد الغذائية الأساسية' },
+    { value: 'سكر', label: 'سكر', category: 'المواد الغذائية الأساسية', defaultPrice: 1.5 },
+    { value: 'ملح', label: 'ملح', category: 'المواد الغذائية الأساسية', defaultPrice: 0.8 },
+    { value: 'زيت نباتي', label: 'زيت نباتي 1 لتر', category: 'المواد الغذائية الأساسية', defaultPrice: 4.600 },
+    { value: 'زيت نباتي 5 لتر', label: 'زيت نباتي 5 لتر', category: 'المواد الغذائية الأساسية', defaultPrice: 24.700 },
+    { value: 'زيت زيتون', label: 'زيت زيتون 1 لتر', category: 'المواد الغذائية الأساسية', defaultPrice: 12.000 },
+    { value: 'طماطم معجونة 500غ', label: 'طماطم معجونة 500غ', category: 'المواد الغذائية الأساسية', defaultPrice: 2.600 },
+    { value: 'طماطم معجونة 1000غ', label: 'طماطم معجونة 1000غ', category: 'المواد الغذائية الأساسية', defaultPrice: 4.600 },
+    { value: 'حليب', label: 'حليب 1 لتر', category: 'المواد الغذائية الأساسية', defaultPrice: 1.350 },
 
     // منتجات غذائية إضافية (رمضانية) - Produits alimentaires supplémentaires (ramadan)
-    { value: 'تمر', label: 'تمر', category: 'منتجات غذائية إضافية (رمضانية)' },
-    { value: 'عسل', label: 'عسل', category: 'منتجات غذائية إضافية (رمضانية)' },
-    { value: 'مربى', label: 'مربى', category: 'منتجات غذائية إضافية (رمضانية)' },
-    { value: 'زبدة', label: 'زبدة', category: 'منتجات غذائية إضافية (رمضانية)' },
-    { value: 'سمن', label: 'سمن', category: 'منتجات غذائية إضافية (رمضانية)' },
-    { value: 'شوكولاتة قابلة للدهن', label: 'شوكولاتة قابلة للدهن', category: 'منتجات غذائية إضافية (رمضانية)' },
-    { value: 'فواكه جافة (لوز، فستق، جوز، زبيب)', label: 'فواكه جافة (لوز، فستق، جوز، زبيب)', category: 'منتجات غذائية إضافية (رمضانية)' },
-    { value: 'مشروبات (عصير، ماء معدني)', label: 'مشروبات (عصير، ماء معدني)', category: 'منتجات غذائية إضافية (رمضانية)' },
+    { value: 'تمر', label: 'تمر 1 كغ', category: 'منتجات غذائية إضافية (رمضانية)', defaultPrice: 5.0 },
+    { value: 'تونا', label: 'تونا', category: 'منتجات غذائية إضافية (رمضانية)', defaultPrice: 5.500 },
+    { value: 'ماء معدني 1.5ل', label: 'ماء معدني 1.5ل', category: 'منتجات غذائية إضافية (رمضانية)', defaultPrice: 0.9 },
+    { value: 'ماء معدني 0.5ل', label: 'ماء معدني 0.5ل', category: 'منتجات غذائية إضافية (رمضانية)', defaultPrice: 0.6 },
 
-    // مواد غذائية قابلة للطهي - Matières alimentaires cuisinables
-    { value: 'لحم (غنم، دجاج، بقر)', label: 'لحم (غنم، دجاج، بقر)', category: 'مواد غذائية قابلة للطهي' },
-    { value: 'سمك', label: 'سمك', category: 'مواد غذائية قابلة للطهي' },
-    { value: 'بطاطا', label: 'بطاطا', category: 'مواد غذائية قابلة للطهي' },
-    { value: 'بصل', label: 'بصل', category: 'مواد غذائية قابلة للطهي' },
-    { value: 'ثوم', label: 'ثوم', category: 'مواد غذائية قابلة للطهي' },
-    { value: 'طماطم', label: 'طماطم', category: 'مواد غذائية قابلة للطهي' },
-    { value: 'فلفل', label: 'فلفل', category: 'مواد غذائية قابلة للطهي' },
-    { value: 'جزر', label: 'جزر', category: 'مواد غذائية قابلة للطهي' },
-    { value: 'كوسة', label: 'كوسة', category: 'مواد غذائية قابلة للطهي' },
-    { value: 'قرع', label: 'قرع', category: 'مواد غذائية قابلة للطهي' },
-    { value: 'بقدونس', label: 'بقدونس', category: 'مواد غذائية قابلة للطهي' },
-    { value: 'نعناع', label: 'نعناع', category: 'مواد غذائية قابلة للطهي' },
+    // مواد غذائية قابلة للطهي - M
 
     // منتجات المخابز والمعجنات - Produits de boulangerie et pâtisserie
-    { value: 'خبز', label: 'خبز', category: 'منتجات المخابز والمعجنات' },
-    { value: 'بوريك', label: 'بوريك', category: 'منتجات المخابز والمعجنات' },
-    { value: 'عجينة مورقة', label: 'عجينة مورقة', category: 'منتجات المخابز والمعجنات' },
-    { value: 'فطائر', label: 'فطائر', category: 'منتجات المخابز والمعجنات' },
-    { value: 'معجنات', label: 'معجنات', category: 'منتجات المخابز والمعجنات' },
+    { value: 'خبز', label: 'خبز', category: 'منتجات المخابز والمعجنات', defaultPrice: 0.200 },
+
 
     // مواد غذائية خاصة بالسحور - Matières alimentaires spéciales pour le suhoor
-    { value: 'لبن (روب)', label: 'لبن (روب)', category: 'مواد غذائية خاصة بالسحور' },
-    { value: 'جبن', label: 'جبن', category: 'مواد غذائية خاصة بالسحور' },
-    { value: 'شوربة جاهزة', label: 'شوربة جاهزة', category: 'مواد غذائية خاصة بالسحور' },
-    { value: 'شوفان', label: 'شوفان', category: 'مواد غذائية خاصة بالسحور' },
-    { value: 'دقيق الذرة', label: 'دقيق الذرة', category: 'مواد غذائية خاصة بالسحور' }
+    { value: 'لبن (روب)', label: 'لبن 1 لتر', category: 'مواد غذائية خاصة بالسحور', defaultPrice: 1.5 },
+
+
+    // شوربات - Soupes
+    { value: 'شربة شعير', label: 'شربة شعير', category: 'شوربات', defaultPrice: 2.200 },
+    { value: 'شربة لسان عصفور', label: 'شربة لسان عصفور', category: 'شوربات', defaultPrice: 0.400 },
+
+    // منتجات محمصة - Produits torréfiés
+    { value: 'محمص', label: 'محمص', category: 'منتجات محمصة', defaultPrice: 0.400 }
   ];
   const [donations, setDonations] = useState([]);
   const [productTotals, setProductTotals] = useState({});
@@ -115,6 +97,12 @@ const DonRamadhan = () => {
   const [selectedProductForAssignment, setSelectedProductForAssignment] = useState('');
   const [assignmentDestination, setAssignmentDestination] = useState('');
   const [assignmentQuantity, setAssignmentQuantity] = useState('');
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalItems: 0,
+    totalPages: 0
+  });
   const [formData, setFormData] = useState({
     productName: '',
     unitPrice: '',
@@ -141,6 +129,12 @@ const DonRamadhan = () => {
     monthlyRemainingTotal: 0,
     monthlyRemainingQuantity: 0
   });
+
+  // Historical data state
+  const [historicalData, setHistoricalData] = useState({});
+  const [availableYears, setAvailableYears] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [historicalLoading, setHistoricalLoading] = useState(false);
 
   // Calculer les totaux par produit
   const calculateProductTotals = (donationsList) => {
@@ -271,19 +265,112 @@ const DonRamadhan = () => {
     });
   };
 
+  // Group donations by year and calculate yearly statistics
+  const groupDonationsByYear = (allDonations) => {
+    const yearlyData = {};
+    const years = new Set();
+
+    allDonations.forEach(donation => {
+      const donationDate = new Date(donation.donationDate || donation.date);
+      const year = donationDate.getFullYear();
+      
+      years.add(year);
+      
+      if (!yearlyData[year]) {
+        yearlyData[year] = {
+          totalValue: 0,
+          totalQuantity: 0,
+          distributedValue: 0,
+          distributedQuantity: 0,
+          products: {},
+          donations: []
+        };
+      }
+
+      const total = donation.unitPrice * donation.quantity;
+      const distributedQuantity = donation.distributedQuantity || 0;
+      const distributedTotal = donation.unitPrice * distributedQuantity;
+
+      yearlyData[year].totalValue += total;
+      yearlyData[year].totalQuantity += donation.quantity;
+      yearlyData[year].distributedValue += distributedTotal;
+      yearlyData[year].distributedQuantity += distributedQuantity;
+      yearlyData[year].donations.push(donation);
+
+      // Group by product for the year
+      if (!yearlyData[year].products[donation.productName]) {
+        yearlyData[year].products[donation.productName] = {
+          totalQuantity: 0,
+          distributedQuantity: 0,
+          totalValue: 0,
+          distributedValue: 0,
+          unitPrice: donation.unitPrice
+        };
+      }
+
+      yearlyData[year].products[donation.productName].totalQuantity += donation.quantity;
+      yearlyData[year].products[donation.productName].totalValue += total;
+      yearlyData[year].products[donation.productName].distributedQuantity += distributedQuantity;
+      yearlyData[year].products[donation.productName].distributedValue += distributedTotal;
+    });
+
+    // Calculate remaining values
+    Object.keys(yearlyData).forEach(year => {
+      const data = yearlyData[year];
+      data.remainingValue = data.totalValue - data.distributedValue;
+      data.remainingQuantity = data.totalQuantity - data.distributedQuantity;
+      
+      // Calculate product remaining values
+      Object.keys(data.products).forEach(productName => {
+        const product = data.products[productName];
+        product.remainingQuantity = product.totalQuantity - product.distributedQuantity;
+        product.remainingValue = product.totalValue - product.distributedValue;
+      });
+    });
+
+    setHistoricalData(yearlyData);
+    setAvailableYears(Array.from(years).sort((a, b) => b - a));
+  };
+
+  // Charger toutes les données pour les statistiques
+  const loadAllDonationsForStats = async () => {
+    try {
+      const response = await ramadhanService.getAll({ limit: 10000 });
+      if (response.success) {
+        const allDonationsData = response.data?.data || response.data || [];
+        calculateTotals(allDonationsData);
+        setProductTotals(calculateProductTotals(allDonationsData));
+        groupDonationsByYear(allDonationsData);
+      }
+    } catch (err) {
+      console.error('Erreur lors du chargement des données pour statistiques:', err);
+    }
+  };
+
   // Charger les données depuis l'API
-  const loadDonations = async () => {
+  const loadDonations = async (page = 1) => {
     try {
       setLoading(true);
       setError('');
-      const response = await ramadhanService.getAll();
+      // Request data with pagination
+      const response = await ramadhanService.getAll({ 
+        page: page, 
+        limit: pagination.itemsPerPage 
+      });
       
       if (response.success) {
         const donationsData = response.data?.data || response.data || [];
         setDonations(donationsData);
-        calculateTotals(donationsData);
-        setProductTotals(calculateProductTotals(donationsData));
         
+        // Update pagination info
+        if (response.pagination) {
+          setPagination({
+            currentPage: response.pagination.currentPage,
+            itemsPerPage: response.pagination.itemsPerPage,
+            totalItems: response.pagination.totalItems,
+            totalPages: response.pagination.totalPages
+          });
+        }
       }
     } catch (err) {
       setError('Erreur lors du chargement des données');
@@ -297,12 +384,44 @@ const DonRamadhan = () => {
     }
   };
 
+  const handlePageChange = (event, newPage) => {
+    setPagination(prev => ({ ...prev, currentPage: newPage }));
+    loadDonations(newPage);
+  };
+
   useEffect(() => {
+    // Charger les données paginées pour le tableau
     loadDonations();
+    // Charger toutes les données pour les statistiques
+    loadAllDonationsForStats();
   }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
+    // Auto-fill unit price when a product is selected
+    if (name === 'productName' && value !== 'custom') {
+      const selectedProduct = productOptions.find(option => option.value === value);
+      if (selectedProduct && selectedProduct.defaultPrice > 0) {
+        setFormData(prev => ({
+          ...prev,
+          [name]: value,
+          unitPrice: selectedProduct.defaultPrice.toString()
+        }));
+        return;
+      }
+    }
+    
+    // Clear unit price when switching to custom product
+    if (name === 'productName' && value === 'custom') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        unitPrice: ''
+      }));
+      return;
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -388,7 +507,8 @@ const DonRamadhan = () => {
           message: selectedDonation ? 'Don mis à jour avec succès' : 'Don créé avec succès',
           severity: 'success'
         });
-        loadDonations(); // Recharger les données
+        loadDonations(); // Recharger les données paginées
+        loadAllDonationsForStats(); // Recharger les statistiques complètes
         handleCloseDialog();
       }
     } catch (err) {
@@ -421,7 +541,8 @@ const DonRamadhan = () => {
             message: 'Don supprimé avec succès',
             severity: 'success'
           });
-          loadDonations(); // Recharger les données
+          loadDonations(); // Recharger les données paginées
+          loadAllDonationsForStats(); // Recharger les statistiques complètes
         }
       } catch (err) {
         setSnackbar({
@@ -474,9 +595,11 @@ const DonRamadhan = () => {
     setDonations(updatedDonations);
     calculateTotals(updatedDonations);
     setProductTotals(calculateProductTotals(updatedDonations));
+    // Recharger les statistiques complètes depuis le serveur
+    loadAllDonationsForStats();
   };
 
-  const handleAssignmentQuantityChange = (productName, destination, newQuantity) => {
+  const handleAssignmentQuantityChange = async (productName, destination, newQuantity) => {
     const quantity = parseInt(newQuantity);
     if (isNaN(quantity) || quantity < 0) return;
 
@@ -497,47 +620,67 @@ const DonRamadhan = () => {
       return;
     }
 
-    // Get all donations for this product
-    const productDonations = donations.filter(d => d.productName === productName);
+    try {
+      // Get all donations for this product
+      const productDonations = donations.filter(d => d.productName === productName);
 
-    let updatedDonations = [...donations];
-    let remainingToAssign = quantity;
+      let updatedDonations = [...donations];
+      let remainingToAssign = quantity;
 
-    // First, reset all assignments for this destination for this product
-    productDonations.forEach(donation => {
-      if (destination === 'restaurant') {
+      // First, reset all assignments for this destination for this product
+      for (const donation of productDonations) {
+        const updateData = {
+          [destination === 'restaurant' ? 'assignedToRestaurant' : 'assignedToKouffa']: 0
+        };
+        await ramadhanService.update(donation._id || donation.id, updateData);
+        
         updatedDonations = updatedDonations.map(d =>
-          d.id === donation.id ? { ...d, assignedToRestaurant: 0 } : d
-        );
-      } else {
-        updatedDonations = updatedDonations.map(d =>
-          d.id === donation.id ? { ...d, assignedToKouffa: 0 } : d
+          d.id === donation.id ? { ...d, [destination === 'restaurant' ? 'assignedToRestaurant' : 'assignedToKouffa']: 0 } : d
         );
       }
-    });
 
-    // Then assign the new total quantity across donations from oldest to newest
-    for (const donation of productDonations) {
-      if (remainingToAssign <= 0) break;
+      // Then assign the new total quantity across donations from oldest to newest
+      const sortedDonations = productDonations.sort((a, b) => new Date(a.date) - new Date(b.date));
+      
+      for (const donation of sortedDonations) {
+        if (remainingToAssign <= 0) break;
 
-      const toAssignFromThis = Math.min(remainingToAssign, donation.quantity);
+        const toAssignFromThis = Math.min(remainingToAssign, donation.quantity);
 
-      if (toAssignFromThis > 0) {
-        updatedDonations = updatedDonations.map(d =>
-          d.id === donation.id
-            ? {
-                ...d,
-                [destination === 'restaurant' ? 'assignedToRestaurant' : 'assignedToKouffa']: toAssignFromThis
-              }
-            : d
-        );
-        remainingToAssign -= toAssignFromThis;
+        if (toAssignFromThis > 0) {
+          const updateData = {
+            [destination === 'restaurant' ? 'assignedToRestaurant' : 'assignedToKouffa']: toAssignFromThis
+          };
+          await ramadhanService.update(donation._id || donation.id, updateData);
+          
+          updatedDonations = updatedDonations.map(d =>
+            d.id === donation.id
+              ? { ...d, [destination === 'restaurant' ? 'assignedToRestaurant' : 'assignedToKouffa']: toAssignFromThis }
+              : d
+          );
+          remainingToAssign -= toAssignFromThis;
+        }
       }
+
+      setDonations(updatedDonations);
+      calculateTotals(updatedDonations);
+      setProductTotals(calculateProductTotals(updatedDonations));
+      // Recharger les statistiques complètes depuis le serveur
+      loadAllDonationsForStats();
+      
+      setSnackbar({
+        open: true,
+        message: 'Assignation mise à jour avec succès',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour des assignations:', error);
+      setSnackbar({
+        open: true,
+        message: 'Erreur lors de la mise à jour des assignations',
+        severity: 'error'
+      });
     }
-
-    setDonations(updatedDonations);
-    calculateTotals(updatedDonations);
-    setProductTotals(calculateProductTotals(updatedDonations));
   };
 
   const handlePrintProductTotals = () => {
@@ -1031,6 +1174,93 @@ const DonRamadhan = () => {
     printWindow.print();
   };
 
+  // Generate PDF for historical yearly report
+  const generateHistoricalPDF = (year) => {
+    const yearData = historicalData[year];
+    if (!yearData) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setTextColor(102, 126, 234);
+    doc.text(`Rapport Historique des Dons Ramadhan - ${year}`, pageWidth / 2, 20, { align: 'center' });
+    
+    // Generation date
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, pageWidth / 2, 30, { align: 'center' });
+    
+    // Summary Statistics
+    doc.setFontSize(14);
+    doc.setTextColor(50);
+    doc.text('Résumé Annuel', 20, 50);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(80);
+    const summaryData = [
+      ['Total des dons', `${yearData.totalValue.toFixed(2)} TND`, `${yearData.totalQuantity} unités`],
+      ['Total distribué', `${yearData.distributedValue.toFixed(2)} TND`, `${yearData.distributedQuantity} unités`],
+      ['Total restant', `${yearData.remainingValue.toFixed(2)} TND`, `${yearData.remainingQuantity} unités`],
+      ['Taux de distribution', `${yearData.totalQuantity > 0 ? Math.round((yearData.distributedQuantity / yearData.totalQuantity) * 100) : 0}%`, '']
+    ];
+    
+    let yPos = 60;
+    summaryData.forEach(([label, value, quantity]) => {
+      doc.text(`${label}:`, 20, yPos);
+      doc.text(value, 80, yPos);
+      if (quantity) doc.text(quantity, 140, yPos);
+      yPos += 8;
+    });
+    
+    // Products Table
+    yPos += 10;
+    doc.setFontSize(14);
+    doc.setTextColor(50);
+    doc.text('Détail par Produit', 20, yPos);
+    
+    yPos += 10;
+    const tableData = Object.entries(yearData.products).map(([productName, data]) => [
+      productName,
+      data.totalQuantity.toString(),
+      data.distributedQuantity.toString(),
+      (data.totalQuantity - data.distributedQuantity).toString(),
+      data.totalValue.toFixed(2) + ' TND',
+      data.distributedValue.toFixed(2) + ' TND',
+      (data.totalValue - data.distributedValue).toFixed(2) + ' TND'
+    ]);
+    
+    // Use the imported autoTable function
+    autoTable(doc, {
+      head: [['Produit', 'Total', 'Distribué', 'Restant', 'Valeur Totale', 'Valeur Distribuée', 'Valeur Restante']],
+      body: tableData,
+      startY: yPos,
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [102, 126, 234], textColor: 255 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: {
+        0: { cellWidth: 40 },
+        1: { cellWidth: 20, halign: 'center' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 20, halign: 'center' },
+        4: { cellWidth: 30, halign: 'right' },
+        5: { cellWidth: 30, halign: 'right' },
+        6: { cellWidth: 30, halign: 'right' }
+      }
+    });
+    
+    // Footer
+    const finalY = doc.lastAutoTable?.finalY || yPos + 100;
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text('Association des Dons Alimentaires - Système de Gestion des Dons Ramadhan', pageWidth / 2, finalY + 20, { align: 'center' });
+    
+    // Save the PDF
+    doc.save(`Rapport_Dons_Ramadhan_${year}.pdf`);
+  };
+
   return (
     <MainCard title={
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -1472,6 +1702,250 @@ const DonRamadhan = () => {
         </Grid>
       </Grid>
 
+      {/* Section Historique par Année */}
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <HistoryOutlined sx={{ fontSize: '28px', color: '#667eea' }} />
+            <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#333' }}>
+              Historique des Dons par Année
+            </Typography>
+          </Box>
+          
+          {availableYears.length > 0 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <InputLabel>Année</InputLabel>
+                <Select
+                  value={selectedYear}
+                  label="Année"
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                >
+                  {availableYears.map(year => (
+                    <MenuItem key={year} value={year}>{year}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <Button
+                variant="contained"
+                startIcon={<DownloadOutlined />}
+                onClick={() => generateHistoricalPDF(selectedYear)}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  borderRadius: 2,
+                  px: 3,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                Télécharger PDF
+              </Button>
+            </Box>
+          )}
+        </Box>
+
+        {availableYears.length === 0 ? (
+          <Card variant="outlined" sx={{ textAlign: 'center', py: 8 }}>
+            <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+              Aucune donnée historique disponible
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Les données historiques apparaîtront ici une fois que des dons seront enregistrés
+            </Typography>
+          </Card>
+        ) : (
+          <>
+            {/* Cartes de statistiques pour l'année sélectionnée */}
+            {historicalData[selectedYear] && (
+              <Grid container spacing={3} sx={{ mb: 3 }}>
+                <Grid item xs={12} md={3}>
+                  <Card
+                    sx={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      borderRadius: 3,
+                      boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                      transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
+                      },
+                    }}
+                  >
+                    <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                      <Typography variant="h6" sx={{ mb: 1, opacity: 0.9 }}>
+                        Total Annuel
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+                        {historicalData[selectedYear].totalValue.toFixed(2)} TND
+                      </Typography>
+                      <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                        {historicalData[selectedYear].totalQuantity} unités
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                <Grid item xs={12} md={3}>
+                  <Card
+                    sx={{
+                      background: 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)',
+                      color: 'white',
+                      borderRadius: 3,
+                      boxShadow: '0 8px 32px rgba(74, 222, 128, 0.3)',
+                      transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 12px 40px rgba(74, 222, 128, 0.4)',
+                      },
+                    }}
+                  >
+                    <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                      <Typography variant="h6" sx={{ mb: 1, opacity: 0.9 }}>
+                        Distribué
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+                        {historicalData[selectedYear].distributedValue.toFixed(2)} TND
+                      </Typography>
+                      <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                        {historicalData[selectedYear].distributedQuantity} unités
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                <Grid item xs={12} md={3}>
+                  <Card
+                    sx={{
+                      background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                      color: 'white',
+                      borderRadius: 3,
+                      boxShadow: '0 8px 32px rgba(251, 191, 36, 0.3)',
+                      transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 12px 40px rgba(251, 191, 36, 0.4)',
+                      },
+                    }}
+                  >
+                    <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                      <Typography variant="h6" sx={{ mb: 1, opacity: 0.9 }}>
+                        Restant
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+                        {historicalData[selectedYear].remainingValue.toFixed(2)} TND
+                      </Typography>
+                      <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                        {historicalData[selectedYear].remainingQuantity} unités
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                <Grid item xs={12} md={3}>
+                  <Card
+                    sx={{
+                      background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                      color: 'white',
+                      borderRadius: 3,
+                      boxShadow: '0 8px 32px rgba(240, 147, 251, 0.3)',
+                      transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 12px 40px rgba(240, 147, 251, 0.4)',
+                      },
+                    }}
+                  >
+                    <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                      <Typography variant="h6" sx={{ mb: 1, opacity: 0.9 }}>
+                        Taux de Distribution
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+                        {historicalData[selectedYear].totalQuantity > 0 
+                          ? Math.round((historicalData[selectedYear].distributedQuantity / historicalData[selectedYear].totalQuantity) * 100) 
+                          : 0}%
+                      </Typography>
+                      <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                        des dons distribués
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            )}
+
+            {/* Tableau des produits pour l'année sélectionnée */}
+            {historicalData[selectedYear] && (
+              <Card variant="outlined">
+                <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    Détail des produits - {selectedYear}
+                  </Typography>
+                </Box>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Produit</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', textAlign: 'center' }}>Quantité Totale</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', textAlign: 'center' }}>Quantité Distribuée</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', textAlign: 'center' }}>Quantité Restante</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', textAlign: 'right' }}>Valeur Totale (TND)</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', textAlign: 'right' }}>Valeur Distribuée (TND)</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', textAlign: 'right' }}>Valeur Restante (TND)</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {Object.keys(historicalData[selectedYear].products).length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} align="center">
+                            Aucun produit enregistré pour cette année
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        Object.entries(historicalData[selectedYear].products).map(([productName, data]) => (
+                          <TableRow key={productName} hover>
+                            <TableCell sx={{ fontWeight: 'medium' }}>{productName}</TableCell>
+                            <TableCell align="center">{data.totalQuantity}</TableCell>
+                            <TableCell align="center">
+                              <Typography color="success.main" fontWeight="medium">
+                                {data.distributedQuantity}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="center">
+                              <Typography color="warning.main" fontWeight="medium">
+                                {data.remainingQuantity}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">{data.totalValue.toFixed(2)} TND</TableCell>
+                            <TableCell align="right">
+                              <Typography color="success.main" fontWeight="medium">
+                                {data.distributedValue.toFixed(2)} TND
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography color="warning.main" fontWeight="medium">
+                                {data.remainingValue.toFixed(2)} TND
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Card>
+            )}
+          </>
+        )}
+      </Box>
+
       {/* Loading indicator */}
       {loading && (
         <Box sx={{ width: '100%', mb: 3 }}>
@@ -1597,6 +2071,59 @@ const DonRamadhan = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        
+        {/* Pagination Info */}
+        {pagination.totalItems > 0 && (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, mb: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Affichage de {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} à {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} 
+              {' '}sur {pagination.totalItems} dons
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>Éléments/page</InputLabel>
+              <Select
+                value={pagination.itemsPerPage}
+                label="Éléments/page"
+                onChange={(e) => {
+                  const newItemsPerPage = parseInt(e.target.value);
+                  setPagination(prev => ({ ...prev, itemsPerPage: newItemsPerPage, currentPage: 1 }));
+                  loadDonations(1);
+                }}
+              >
+                <MenuItem value={5}>5</MenuItem>
+                <MenuItem value={10}>10</MenuItem>
+                <MenuItem value={25}>25</MenuItem>
+                <MenuItem value={50}>50</MenuItem>
+                <MenuItem value={100}>100</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        )}
+        
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 2 }}>
+            <Pagination
+              count={pagination.totalPages}
+              page={pagination.currentPage}
+              onChange={handlePageChange}
+              color="primary"
+              size="large"
+              showFirstButton
+              showLastButton
+              sx={{
+                '& .MuiPaginationItem-root': {
+                  fontWeight: 'medium',
+                  borderRadius: 2,
+                },
+                '& .Mui-selected': {
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                },
+              }}
+            />
+          </Box>
+        )}
       </Card>
 
       {/* Totaux par produit */}
