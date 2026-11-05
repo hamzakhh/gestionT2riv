@@ -1,0 +1,3 @@
+# Ce dossier est utilisé pour les fichiers uploadés
+# En production, ces fichiers doivent être stockés sur un service cloud (AWS S3, Cloudinary, etc.)
+# Le stockage local est temporaire et sera perdu à chaque redeploy

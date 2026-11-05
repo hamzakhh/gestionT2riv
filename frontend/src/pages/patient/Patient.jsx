@@ -11,19 +11,29 @@ import {
   Paper,
   IconButton,
   Modal,
-  Typography
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  Chip,
+  Divider,
+  Avatar,
+  Tooltip
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, PictureAsPdf as PdfIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, PictureAsPdf as PdfIcon, Visibility as ViewIcon, Close as CloseIcon, Description as DescriptionIcon, Image as ImageIcon, Download as DownloadIcon } from '@mui/icons-material';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import MainCard from 'components/MainCard';
 import PatientForm from './PatientForm';
-import patientService from 'api/patientService';
+import patientService from 'services/patientService';
+import { API_BASE_URL } from 'config';
 
 const Patient = () => {
   const [patients, setPatients] = useState([]);
   const [editingPatient, setEditingPatient] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [viewingPatient, setViewingPatient] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   useEffect(() => {
     fetchPatients();
@@ -31,8 +41,8 @@ const Patient = () => {
 
   const fetchPatients = async () => {
     try {
-      const response = await patientService.getPatients();
-      console.log('Patients response:', response);
+      // Optimisation: limité à 20 patients par page pour un chargement plus rapide
+      const response = await patientService.getPatients(1, 20, '');
       
       // Gérer différents formats de réponse
       let patientsData = [];
@@ -46,7 +56,6 @@ const Patient = () => {
         patientsData = response.data;
       }
       
-      console.log('Patients data to display:', patientsData);
       setPatients(patientsData);
     } catch (error) {
       console.error('Failed to fetch patients', error);
@@ -62,6 +71,60 @@ const Patient = () => {
   const handleCloseForm = () => {
     setEditingPatient(null);
     setIsFormOpen(false);
+  };
+
+  const handleViewPatient = async (patient) => {
+    try {
+      // Récupérer les données complètes du patient (incluant les fichiers)
+      const fullPatientData = await patientService.getPatientById(patient._id);
+      setViewingPatient(fullPatientData.data || fullPatientData);
+      setIsViewModalOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch patient details', error);
+      // Fallback: utiliser les données de la liste si l'API échoue
+      setViewingPatient(patient);
+      setIsViewModalOpen(true);
+    }
+  };
+
+  const handleCloseViewModal = () => {
+    setViewingPatient(null);
+    setIsViewModalOpen(false);
+  };
+
+  const getDocumentUrl = (filePath) => {
+    if (!filePath) return null;
+    
+    // Si c'est déjà une URL complète
+    if (filePath.startsWith('http')) {
+      return filePath;
+    }
+    
+    // Extraire l'URL de base sans le préfixe /api
+    const baseUrl = API_BASE_URL.replace('/api', '');
+    
+    // Extraire le nom de fichier du chemin (peut être Windows ou Unix)
+    const pathParts = filePath.split(/[\/\\]/);
+    const fileName = pathParts[pathParts.length - 1];
+    
+    // Construire l'URL correcte pour le dossier patients
+    return `${baseUrl}/uploads/patients/${fileName}`;
+  };
+
+  const handleViewDocument = (filePath) => {
+    const url = getDocumentUrl(filePath);
+    if (url) {
+      window.open(url, '_blank');
+    } else {
+      alert('Impossible de générer l\'URL du document');
+    }
+  };
+
+  const getFileInfo = (filePath) => {
+    if (!filePath) return null;
+    const fileName = filePath.split('/').pop();
+    const isPdf = fileName.toLowerCase().endsWith('.pdf');
+    return { fileName, isPdf };
   };
 
   const handleSubmit = async (formData) => {
@@ -107,405 +170,175 @@ const Patient = () => {
     }
   };
 
-  const handlePrintPatient = async (patient) => {
+  const handleDownloadPdf = async (patient) => {
+    // Télécharger le PDF généré
+    await handlePrintPatient(patient, true);
+  };
+
+  const handlePrintPatient = async (patient, download = false) => {
     if (typeof jsPDF === 'undefined') {
       console.error('jsPDF n\'est pas chargé correctement');
       return;
     }
     
-    // Créer un nouveau document PDF en mode paysage pour plus d'espace
+    // Créer un nouveau document PDF
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4'
     });
     
-    let y = 20; // Position Y initiale
+    let y = 15; // Position Y initiale
     
-    // Titre
+    // Couleurs professionnelles
+    const primaryColor = [44, 62, 80]; // Bleu foncé
+    const secondaryColor = [52, 152, 219]; // Bleu clair
+    const accentColor = [231, 76, 60]; // Rouge
+    const textColor = [52, 73, 94]; // Gris foncé
+    const lightGray = [245, 245, 245];
+    
+    // ==================== EN-TÊTE ====================
+    // Fond d'en-tête
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, 0, 210, 40, 'F');
+    
+    // Titre principal
+    doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
-    doc.text('FICHE PATIENT', 105, y, { align: 'center' });
-    y += 15;
+    doc.setFontSize(24);
+    doc.text('FICHE PATIENT', 105, 25, { align: 'center' });
+    
+    // Sous-titre
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Dossier médical et administratif', 105, 32, { align: 'center' });
+    
+    y = 50;
+    
+    // ==================== INFORMATIONS DU PATIENT ====================
+    doc.setTextColor(...textColor);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('👤 INFORMATIONS DU PATIENT', 20, y);
+    y += 8;
     
     // Ligne de séparation
-    doc.setDrawColor(200, 200, 200);
+    doc.setDrawColor(...secondaryColor);
     doc.setLineWidth(0.5);
     doc.line(20, y, 190, y);
-    y += 15;
-    
-    // Informations du patient
-    doc.setFontSize(12);
-    const lineHeight = 7;
-    
-    // Fonction pour obtenir l'URL de l'image
-    const getImageUrl = (imageData) => {
-      if (!imageData) return null;
-      
-      // Si c'est un objet File (nouvelle image téléversée)
-      if (imageData instanceof File) {
-        return URL.createObjectURL(imageData);
-      }
-      
-      // Si c'est une chaîne (URL directe)
-      if (typeof imageData === 'string') {
-        // Si c'est déjà une URL complète
-        if (imageData.startsWith('http') || imageData.startsWith('blob:')) {
-          return imageData;
-        }
-        // Sinon, on suppose que c'est un chemin relatif
-        return `${window.location.origin}/${imageData.replace(/^\/+/, '')}`;
-      }
-      
-      // Si c'est un objet avec une propriété url ou path
-      if (imageData.url || imageData.path) {
-        const url = imageData.url || imageData.path;
-        if (url.startsWith('http') || url.startsWith('blob:')) {
-          return url;
-        }
-        return `${window.location.origin}/${url.replace(/^\/+/, '')}`;
-      }
-      
-      return null;
-    };
-    
-    // Fonction pour ajouter une image au PDF
-    const addImageToPdf = async (imageData, title, x, y, maxWidth = 80, maxHeight = 80) => {
-      try {
-        if (!imageData) return y;
-        
-        // Obtenir l'URL de l'image
-        const imageUrl = getImageUrl(imageData);
-        if (!imageUrl) {
-          console.log(`Aucune URL valide pour l'image:`, imageData);
-          return y;
-        }
-        
-        // Créer une nouvelle page si nécessaire
-        if (y > 250) {
-          doc.addPage();
-          y = 20;
-        }
-        
-        // Afficher le titre de l'image
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${title}:`, x, y);
-        y += lineHeight;
-        
-        console.log(`Tentative de chargement de l'image: ${title}`, imageUrl);
-        
-        // Créer un élément image pour obtenir les dimensions
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        
-        // Charger l'image avec un timeout
-        const imgLoadPromise = new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('Timeout loading image'));
-          }, 10000); // 10 secondes de timeout
-          
-          img.onload = () => {
-            clearTimeout(timeout);
-            console.log(`Image chargée: ${title}`, img.width, 'x', img.height);
-            resolve();
-          };
-          
-          img.onerror = (err) => {
-            clearTimeout(timeout);
-            console.error(`Erreur de chargement de l'image: ${title}`, err);
-            reject(err);
-          };
-          
-          // Ajouter un timestamp pour éviter le cache
-          const timestamp = new Date().getTime();
-          const separator = imageUrl.includes('?') ? '&' : '?';
-          img.src = `${imageUrl}${separator}t=${timestamp}`;
-        });
-        
-        await imgLoadPromise;
-        
-        // Vérifier si l'image est valide
-        if (!img.width || !img.height) {
-          throw new Error('Image dimensions are invalid');
-        }
-        
-        // Calculer les dimensions pour s'adapter à l'espace disponible
-        let width = img.width;
-        let height = img.height;
-        const ratio = Math.min(maxWidth / width, maxHeight / height, 1);
-        width = width * ratio;
-        height = height * ratio;
-        
-        console.log(`Ajout de l'image au PDF: ${title}`, width, 'x', height);
-        
-        try {
-          // Essayer d'ajouter l'image avec les paramètres optimisés
-          doc.addImage({
-            imageData: img,
-            x: x + 5,
-            y: y,
-            width: width,
-            height: height,
-            compression: 'FAST',
-            format: 'JPEG',
-            quality: 0.9
-          });
-          
-          y += height + 10;
-          
-          // Ajouter des informations sur l'image si disponibles
-          const fileName = imageData.originalname || imageData.name || '';
-          if (fileName) {
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8);
-            const maxWidth = 50; // Largeur maximale pour le nom de fichier
-            const fileNameText = doc.splitTextToSize(`Fichier: ${fileName}`, maxWidth);
-            doc.text(fileNameText, x + 5, y);
-            y += (fileNameText.length * 3) + 2; // Ajuster en fonction du nombre de lignes
-          }
-          
-          return y;
-        } catch (imgError) {
-          console.error(`Erreur lors de l'ajout de l'image au PDF:`, imgError);
-          doc.setFont('helvetica', 'italic');
-          doc.text(`(Erreur d'affichage: ${title})`, x + 5, y);
-          return y + lineHeight * 2;
-        }
-      } catch (error) {
-        console.error(`Erreur lors du traitement de l'image ${title}:`, error);
-        doc.setFont('helvetica', 'italic');
-        doc.text(`(Erreur: ${title})`, 20, y);
-        return y + lineHeight * 2;
-      }
-    };
-  
-    // Style pour les en-têtes de section
-    const sectionStyle = {
-      fontSize: 14,
-      color: '#2c3e50',
-      marginBottom: 5
-    };
-
-    // Style pour les labels
-    const labelStyle = {
-      fontSize: 10,
-      color: '#7f8c8d',
-      marginBottom: 2
-    };
-
-    // Style pour les valeurs
-    const valueStyle = {
-      fontSize: 11,
-      color: '#2c3e50',
-      marginBottom: 8
-    };
-
-    // Ajouter une section pour les informations de base
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(sectionStyle.fontSize);
-    doc.setTextColor(sectionStyle.color);
-    doc.text('INFORMATIONS DU PATIENT', 20, y);
     y += 10;
-
-    // Créer un tableau pour les informations de base
-    const patientData = [
-      { label: 'ID', value: patient._id },
-      { label: 'Nom', value: patient.lastName },
-      { label: 'Prénom', value: patient.firstName },
-      { label: 'Adresse', value: patient.address },
-      { label: 'Téléphone', value: patient.phone },
-      { label: 'Tuteur', value: `${patient.guardianFirstName || ''} ${patient.guardianLastName || ''}`.trim() || 'Non spécifié' },
-      { label: 'Type de patient', value: patient.patientType },
-      { 
-    label: 'Photos', 
-    value: patient.files && patient.files.length > 0 
-      ? patient.files.map((file, index) => (
-          <img 
-            key={index} 
-            src={`/uploads/${file}`} 
-            alt={`Photo ${index + 1}`} 
-            style={{ maxWidth: '100px', maxHeight: '100px', margin: '5px' }} 
-          />
-        ))
-      : 'Aucune photo disponible'
-  }
-    ];
-
-    // Ajouter les informations de base dans un tableau à deux colonnes
-    const startX = 20;
-    const colWidth = 85;
-    const rowHeight = 8;
-    let currentY = y;
     
-    patientData.forEach((item, index) => {
+    // Tableau des informations du patient
+    const patientInfo = [
+      { label: 'Nom complet', value: `${patient.firstName} ${patient.lastName}` },
+      { label: 'Adresse', value: patient.address || 'Non spécifié' },
+      { label: 'Téléphone', value: patient.phone || 'Non spécifié' },
+      { label: 'Tuteur', value: `${patient.guardianFirstName || ''} ${patient.guardianLastName || ''}`.trim() || 'Non spécifié' },
+      { label: 'Type de patient', value: patient.patientType || 'Non spécifié' },
+      { label: 'Date d\'entrée', value: patient.entryDate ? new Date(patient.entryDate).toLocaleDateString('fr-FR') : 'Non spécifié' },
+    ];
+    
+    if (patient.patientType === 'spécifique' && patient.specificEquipment) {
+      patientInfo.push({ label: 'Équipement spécifique', value: patient.specificEquipment });
+    }
+    
+    // Dessiner le tableau d'informations
+    const tableX = 20;
+    const tableWidth = 170;
+    const rowHeight = 10;
+    
+    patientInfo.forEach((info, index) => {
       // Vérifier si on doit ajouter une nouvelle page
-      if (currentY > 250) {
+      if (y > 250) {
         doc.addPage();
-        currentY = 20;
+        y = 20;
       }
       
-      const col = index % 2;
-      const row = Math.floor(index / 2);
-      const x = startX + (col * colWidth);
-      
-      // Dessiner un fond légèrement gris pour les lignes paires
-      if (row % 2 === 0) {
-        doc.setFillColor(245, 245, 245);
-        doc.rect(x, currentY - 4, colWidth - 5, rowHeight + 2, 'F');
+      // Fond alterné
+      if (index % 2 === 0) {
+        doc.setFillColor(...lightGray);
+        doc.rect(tableX, y - 4, tableWidth, rowHeight, 'F');
       }
       
-      // Ajouter le label
+      // Label
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(labelStyle.fontSize);
-      doc.setTextColor(labelStyle.color);
-      doc.text(`${item.label}:`, x, currentY);
+      doc.setFontSize(10);
+      doc.setTextColor(...primaryColor);
+      doc.text(`${info.label}:`, tableX + 5, y);
       
-      // Ajouter la valeur
+      // Valeur
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(valueStyle.fontSize);
-      doc.setTextColor(valueStyle.color);
+      doc.setFontSize(10);
+      doc.setTextColor(...textColor);
+      const valueText = doc.splitTextToSize(info.value, tableWidth - 50);
+      doc.text(valueText, tableX + 50, y);
       
-      // Gérer les textes longs avec retour à la ligne
-      const text = String(item.value || '-');
-      const splitText = doc.splitTextToSize(text, colWidth - 25); // Largeur réduite pour la colonne
-      doc.text(splitText, x + 30, currentY);
-      
-      // Ajuster la position Y en fonction du nombre de lignes
-      currentY += Math.max(rowHeight, splitText.length * 5);
+      y += Math.max(rowHeight, valueText.length * 5);
     });
     
-    y = currentY + 10;
-    
-    // Section Documents
-    if (y > 120) {
-      doc.addPage();
-      y = 20;
-    }
-    
-    // Style pour la section des documents
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(sectionStyle.fontSize);
-    doc.setTextColor(sectionStyle.color);
-    doc.text('DOCUMENTS ASSOCIÉS', 20, y);
     y += 10;
     
-    // Fonction utilitaire pour vérifier si un patient a des documents
-    const hasDocuments = (patient) => {
-      const hasDocs = !!(patient.cinPhoto || patient.contractPhoto || patient.notebookPhoto);
-      console.log('Documents disponibles:', {
-        cinPhoto: !!patient.cinPhoto,
-        contractPhoto: !!patient.contractPhoto,
-        notebookPhoto: !!patient.notebookPhoto,
-        hasAny: hasDocs
-      });
-      return hasDocs;
-    };
-    
-    // Vérifier si le patient a des documents
-    if (!hasDocuments(patient)) {
-      console.log('Aucun document trouvé pour le patient:', patient._id);
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(10);
-      doc.setTextColor(120, 120, 120);
-      doc.text('Aucun document disponible pour ce patient.', 25, y);
-      y += lineHeight;
-    } else {
-      // Ajouter les images du patient
-      try {
-        console.log('Tentative d\'ajout des documents pour le patient:', patient._id);
-        
-        // Ajouter la photo CIN si elle existe
-        if (patient.cinPhoto) {
-          console.log('Ajout de la photo CIN');
-          y = await addImageToPdf(patient.cinPhoto, 'PHOTO CIN / PIÈCE D\'IDENTITÉ', 20, y, 160, 120);
-        } else {
-          console.log('Aucune photo CIN trouvée');
-        }
-        
-        // Ajouter la photo du contrat si elle existe
-        if (patient.contractPhoto) {
-          console.log('Ajout de la photo du contrat');
-          y = await addImageToPdf(patient.contractPhoto, 'PHOTO DU CONTRAT', 20, y, 160, 120);
-        } else {
-          console.log('Aucune photo de contrat trouvée');
-        }
-        
-        // Ajouter la photo du carnet de santé si elle existe
-        if (patient.notebookPhoto) {
-          console.log('Ajout de la photo du carnet de santé');
-          y = await addImageToPdf(patient.notebookPhoto, 'PHOTO DU CARNET DE SANTÉ', 20, y, 160, 120);
-        } else {
-          console.log('Aucune photo de carnet de santé trouvée');
-        }
-      } catch (error) {
-        console.error('Erreur lors de l\'ajout des images au PDF :', error);
-        doc.setFont('helvetica', 'italic');
-        doc.setFontSize(10);
-        doc.setTextColor(200, 0, 0);
-        doc.text('Une erreur est survenue lors du chargement des images.', 20, y);
-        doc.text('Détails de l\'erreur : ' + error.message, 20, y + 10);
-        y += lineHeight * 2;
-      }
-    }
-    
-    // Ajouter la date de génération et le pied de page
+    // ==================== PIED DE PAGE ====================
     const pageCount = doc.internal.getNumberOfPages();
     
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       
-      // Pied de page avec numéro de page
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      
       // Ligne de séparation
-      doc.setDrawColor(220, 220, 220);
-      doc.setLineWidth(0.2);
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
       doc.line(20, 280, 190, 280);
       
       // Texte du pied de page
-      const footerText = `Page ${i} sur ${pageCount} | Généré le ${new Date().toLocaleDateString()} à ${new Date().toLocaleTimeString()}`;
-      doc.text(footerText, 105, 285, { align: 'center' });
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
       
-      // Logo ou texte supplémentaire si nécessaire
-      doc.text('© 2023 Votre Application', 20, 285);
+      const date = new Date().toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      doc.text(`Généré le ${date}`, 20, 285);
+      doc.text(`Page ${i} sur ${pageCount}`, 105, 285, { align: 'center' });
+      doc.text('© Gestion T2Riv - Système de gestion', 190, 285, { align: 'right' });
     }
     
-    // Générer le PDF et l'ouvrir dans un nouvel onglet
+    // ==================== GÉNÉRATION DU PDF ====================
     try {
-      console.log('Génération du PDF terminée, ouverture dans un nouvel onglet...');
       const pdfBlob = doc.output('blob');
       const pdfUrl = URL.createObjectURL(pdfBlob);
       
-      // Ouvrir dans un nouvel onglet avec des options pour éviter le blocage des popups
-      const newWindow = window.open('', '_blank');
-      if (newWindow) {
-        newWindow.location.href = pdfUrl;
-      } else {
-        // Fallback si la fenêtre n'a pas pu être ouverte
+      if (download) {
+        // Télécharger le PDF
         const link = document.createElement('a');
         link.href = pdfUrl;
-        link.target = '_blank';
-        link.download = `patient_${patient.lastName}_${patient.firstName}_${new Date().toISOString().split('T')[0]}.pdf`;
+        link.download = `fiche_patient_${patient.lastName}_${patient.firstName}_${new Date().toISOString().split('T')[0]}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+      } else {
+        // Ouvrir dans un nouvel onglet
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          newWindow.location.href = pdfUrl;
+        } else {
+          // Fallback si la fenêtre n'a pas pu être ouverte
+          const link = document.createElement('a');
+          link.href = pdfUrl;
+          link.target = '_blank';
+          link.download = `fiche_patient_${patient.lastName}_${patient.firstName}_${new Date().toISOString().split('T')[0]}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
       }
     } catch (error) {
       console.error('Erreur lors de la génération du PDF :', error);
-      // En cas d'erreur, essayer de sauvegarder le PDF partiel
-      try {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        doc.setTextColor(255, 0, 0);
-        doc.text('Erreur lors de la génération du PDF', 20, y);
-        doc.text('Certaines images n\'ont pas pu être chargées', 20, y + 10);
-        doc.save(`patient_${patient.lastName}_${patient.firstName}_ERREUR.pdf`);
-      } catch (e) {
-        console.error('Erreur critique lors de la sauvegarde du PDF :', e);
-        alert('Une erreur est survenue lors de la génération du PDF. Veuillez réessayer.');
-      }
+      alert('Une erreur est survenue lors de la génération du PDF. Veuillez réessayer.');
     }
   };
 
@@ -541,19 +374,47 @@ const Patient = () => {
                   <TableCell>{patient.phone}</TableCell>
                   <TableCell>{patient.patientType}</TableCell>
                   <TableCell>
-                    <IconButton onClick={() => handleOpenForm(patient)} color="primary" title="Modifier">
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton onClick={() => handleDelete(patient._id)} color="error" title="Supprimer">
-                      <DeleteIcon />
-                    </IconButton>
-                    <IconButton 
-                      onClick={() => handlePrintPatient(patient)} 
-                      color="secondary" 
-                      title="Exporter en PDF"
-                    >
-                      <PdfIcon />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <Tooltip title="Voir détails">
+                        <IconButton 
+                          onClick={() => handleViewPatient(patient)} 
+                          size="small"
+                          sx={{ 
+                            bgcolor: 'info.light',
+                            color: 'info.dark',
+                            '&:hover': { bgcolor: 'info.main', color: 'white' }
+                          }}
+                        >
+                          <ViewIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Modifier">
+                        <IconButton 
+                          onClick={() => handleOpenForm(patient)} 
+                          size="small"
+                          sx={{ 
+                            bgcolor: 'primary.light',
+                            color: 'primary.dark',
+                            '&:hover': { bgcolor: 'primary.main', color: 'white' }
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Supprimer">
+                        <IconButton 
+                          onClick={() => handleDelete(patient._id)} 
+                          size="small"
+                          sx={{ 
+                            bgcolor: 'grey.200',
+                            color: 'grey.700',
+                            '&:hover': { bgcolor: 'error.main', color: 'white' }
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))
@@ -576,11 +437,14 @@ const Patient = () => {
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: 800,
+            width: '90%',
+            maxWidth: 1200,
+            maxHeight: '90vh',
             bgcolor: 'background.paper',
             boxShadow: 24,
             p: 4,
-            borderRadius: 2
+            borderRadius: 2,
+            overflowY: 'auto'
           }}
         >
           <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
@@ -591,6 +455,263 @@ const Patient = () => {
             onSubmit={handleSubmit}
             onCancel={handleCloseForm}
           />
+        </Box>
+      </Modal>
+
+      {/* Modal pour afficher les détails et documents du patient */}
+      <Modal open={isViewModalOpen} onClose={handleCloseViewModal}>
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '90%',
+            maxWidth: 1000,
+            maxHeight: '90vh',
+            bgcolor: 'background.paper',
+            boxShadow: 24,
+            p: 4,
+            borderRadius: 2,
+            overflowY: 'auto'
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" component="h2">
+              Détails du patient
+            </Typography>
+            <IconButton onClick={handleCloseViewModal}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          {viewingPatient && (
+            <Grid container spacing={3}>
+              {/* Informations personnelles */}
+              <Grid item xs={12}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
+                      👤 Informations personnelles
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Nom complet
+                        </Typography>
+                        <Typography variant="body1" fontWeight={500}>
+                          {viewingPatient.firstName} {viewingPatient.lastName}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Téléphone
+                        </Typography>
+                        <Typography variant="body1" fontWeight={500}>
+                          {viewingPatient.phone}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="text.secondary">
+                          Adresse
+                        </Typography>
+                        <Typography variant="body1" fontWeight={500}>
+                          {viewingPatient.address}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Tuteur
+                        </Typography>
+                        <Typography variant="body1" fontWeight={500}>
+                          {viewingPatient.guardianFirstName} {viewingPatient.guardianLastName}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Type de patient
+                        </Typography>
+                        <Chip 
+                          label={viewingPatient.patientType} 
+                          color={viewingPatient.patientType === 'spécifique' ? 'secondary' : 'primary'}
+                          size="small"
+                        />
+                      </Grid>
+                      {viewingPatient.patientType === 'spécifique' && viewingPatient.specificEquipment && (
+                        <Grid item xs={12}>
+                          <Typography variant="body2" color="text.secondary">
+                            Équipement spécifique
+                          </Typography>
+                          <Typography variant="body1" fontWeight={500}>
+                            {viewingPatient.specificEquipment}
+                          </Typography>
+                        </Grid>
+                      )}
+                      {viewingPatient.entryDate && (
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body2" color="text.secondary">
+                            Date d'entrée
+                          </Typography>
+                          <Typography variant="body1" fontWeight={500}>
+                            {new Date(viewingPatient.entryDate).toLocaleDateString('fr-FR')}
+                          </Typography>
+                        </Grid>
+                      )}
+                    </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              {/* Documents */}
+              <Grid item xs={12}>
+                <Card variant="outlined" sx={{ mt: 2 }}>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: 'primary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <DescriptionIcon /> Documents du patient
+                    </Typography>
+                    
+                    {viewingPatient.files && viewingPatient.files.length > 0 ? (
+                      <Grid container spacing={3}>
+                        {viewingPatient.files.map((file, index) => {
+                          const fileInfo = getFileInfo(file);
+                          const documentUrl = getDocumentUrl(file);
+                          
+                          return (
+                            <Grid item xs={12} sm={6} md={4} key={index}>
+                              <Card 
+                                variant="outlined" 
+                                sx={{ 
+                                  height: '100%',
+                                  transition: 'all 0.3s ease',
+                                  '&:hover': {
+                                    transform: 'translateY(-4px)',
+                                    boxShadow: 3,
+                                    borderColor: 'primary.main'
+                                  }
+                                }}
+                              >
+                                <CardContent sx={{ p: 2 }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                    <Box 
+                                      sx={{ 
+                                        width: 56, 
+                                        height: 56, 
+                                        borderRadius: 2,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        mr: 2,
+                                        bgcolor: fileInfo?.isPdf ? 'error.light' : 'success.light',
+                                        color: fileInfo?.isPdf ? 'error.dark' : 'success.dark'
+                                      }}
+                                    >
+                                      {fileInfo?.isPdf ? (
+                                        <PdfIcon sx={{ fontSize: 32 }} />
+                                      ) : (
+                                        <ImageIcon sx={{ fontSize: 32 }} />
+                                      )}
+                                    </Box>
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                      <Typography 
+                                        variant="body2" 
+                                        noWrap 
+                                        fontWeight={600}
+                                        sx={{ mb: 0.5 }}
+                                      >
+                                        {fileInfo?.fileName || `Document ${index + 1}`}
+                                      </Typography>
+                                      <Chip 
+                                        label={fileInfo?.isPdf ? 'PDF' : 'Image'} 
+                                        size="small"
+                                        variant="outlined"
+                                        color={fileInfo?.isPdf ? 'error' : 'success'}
+                                        sx={{ 
+                                          fontSize: '0.7rem',
+                                          height: 20,
+                                          '& .MuiChip-label': {
+                                            px: 1
+                                          }
+                                        }}
+                                      />
+                                    </Box>
+                                  </Box>
+                                  
+                                  <Button
+                                    fullWidth
+                                    variant="contained"
+                                    size="small"
+                                    startIcon={<ViewIcon />}
+                                    onClick={() => handleViewDocument(file)}
+                                    sx={{
+                                      textTransform: 'none',
+                                      fontWeight: 500,
+                                      py: 1
+                                    }}
+                                  >
+                                    Voir le document
+                                  </Button>
+                                </CardContent>
+                              </Card>
+                            </Grid>
+                          );
+                        })}
+                      </Grid>
+                    ) : (
+                      <Box 
+                        sx={{ 
+                          textAlign: 'center', 
+                          py: 6,
+                          bgcolor: 'grey.50',
+                          borderRadius: 2,
+                          border: '2px dashed',
+                          borderColor: 'grey.300'
+                        }}
+                      >
+                        <DescriptionIcon sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
+                        <Typography variant="body1" color="text.secondary" fontWeight={500}>
+                          Aucun document disponible
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Les documents seront affichés ici après leur ajout
+                        </Typography>
+                      </Box>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              {/* Actions */}
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<EditIcon />}
+                    onClick={() => {
+                      handleCloseViewModal();
+                      handleOpenForm(viewingPatient);
+                    }}
+                  >
+                    Modifier
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<DownloadIcon />}
+                    onClick={() => handleDownloadPdf(viewingPatient)}
+                    sx={{ color: 'error.main', borderColor: 'error.main' }}
+                  >
+                    Télécharger PDF
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<PdfIcon />}
+                    onClick={() => handlePrintPatient(viewingPatient)}
+                  >
+                    Exporter en PDF
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+          )}
         </Box>
       </Modal>
     </MainCard>

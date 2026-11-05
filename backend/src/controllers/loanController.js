@@ -1,595 +1,355 @@
-import mongoose from 'mongoose';
+import {
+  createLoan,
+  returnLoan,
+  cancelLoan,
+  getOverdueLoans,
+  getLoanStats,
+  getLoansByPatient,
+  getLoansByEquipment,
+  getEquipmentSummary,
+  getEquipmentByTypeCategory
+} from '../services/loanService.js';
 import Loan from '../models/Loan.js';
 import Equipment from '../models/Equipment.js';
-import Patient from '../models/Patient.js';
-import asyncHandler from 'express-async-handler';
-import { LOAN_STATUS } from '../config/constants.js';
+import { getPaginationParams, formatPaginatedResponse } from '../utils/helpers.js';
+import logger from '../utils/logger.js';
 
 /**
- * @desc    Corriger les activeLoans négatifs (fonction de maintenance)
- * @route   POST /api/loans/fix-active-loans
- * @access  Privé (admin uniquement)
+ * @desc    Obtenir tous les prêts
+ * @route   GET /api/loans
+ * @access  Private
  */
-const fixActiveLoans = asyncHandler(async (req, res) => {
+export const getLoans = async (req, res, next) => {
   try {
-    console.log('Début de la correction des activeLoans négatifs...');
+    const { page, limit, status, patient, equipment, overdue, search } = req.query;
+    const { skip, itemsPerPage } = getPaginationParams(page, limit);
+
+    // Construire le filtre
+    const filter = {};
+    if (status) filter.status = status;
+    if (patient) filter.patient = patient;
+    if (equipment) filter.equipment = equipment;
     
-    // Trouver tous les patients avec des activeLoans négatifs
-    const patientsWithNegativeLoans = await Patient.find({ 
-      activeLoans: { $lt: 0 } 
-    });
-    
-    console.log(`Trouvé ${patientsWithNegativeLoans.length} patients avec des activeLoans négatifs`);
-    
-    let correctedCount = 0;
-    
-    for (const patient of patientsWithNegativeLoans) {
-      const equipmentCount = Array.isArray(patient.borrowedEquipment) ? patient.borrowedEquipment.length : 0;
-      const correctActiveLoans = Math.max(0, equipmentCount);
-      
-      if (patient.activeLoans !== correctActiveLoans) {
-        console.log(`Correction patient ${patient._id}: ${patient.activeLoans} -> ${correctActiveLoans} (borrowedEquipment: ${equipmentCount})`);
-        
-        // Utiliser updateOne pour contourner les validations
-        await Patient.updateOne(
-          { _id: patient._id },
-          { $set: { activeLoans: correctActiveLoans } }
-        );
-        correctedCount++;
-      }
+    // Filtre overdue
+    if (overdue === 'true') {
+      filter.status = 'active';
+      filter.expectedReturnDate = { $lt: new Date() };
     }
-    
-    console.log(`Correction terminée: ${correctedCount} patients corrigés`);
-    
-    res.json({
+
+    // Recherche textuelle
+    if (search) {
+      // TODO: Implémenter la recherche sur patient et equipment
+      // Pour l'instant, recherche basique
+    }
+
+    const loans = await Loan.find(filter)
+      .populate('patient', 'firstName lastName phone')
+      .populate('equipment', 'assetId name serialNumber')
+      .populate('createdBy', 'firstName lastName')
+      .populate('returnedBy', 'firstName lastName')
+      .populate('cancelledBy', 'firstName lastName')
+      .sort({ loanDate: -1 })
+      .skip(skip)
+      .limit(itemsPerPage);
+
+    const total = await Loan.countDocuments(filter);
+
+    // Calculer isOverdue pour chaque prêt
+    const loansWithOverdue = loans.map(loan => ({
+      ...loan.toObject(),
+      isOverdue: loan.status === 'active' && new Date() > loan.expectedReturnDate
+    }));
+
+    res.status(200).json({
       success: true,
-      message: `${correctedCount} patients ont été corrigés`,
-      correctedCount,
-      totalFound: patientsWithNegativeLoans.length
-    });
-    
-  } catch (error) {
-    console.error('Erreur lors de la correction des activeLoans:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la correction des activeLoans',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-
-/**
- * @desc    Correction automatique au démarrage (si nécessaire)
- * @access  Privé (admin uniquement)
- */
-const emergencyFix = asyncHandler(async (req, res) => {
-  try {
-    console.log('Correction d\'urgence des activeLoans négatifs...');
-    
-    // Utiliser updateMany pour corriger tous les patients en une seule fois
-    const result = await Patient.updateMany(
-      { activeLoans: { $lt: 0 } },
-      { $set: { activeLoans: 0 } }
-    );
-    
-    console.log(`Correction d'urgence: ${result.modifiedCount} patients corrigés`);
-    
-    res.json({
-      success: true,
-      message: `Correction d'urgence terminée: ${result.modifiedCount} patients corrigés`,
-      correctedCount: result.modifiedCount
-    });
-    
-  } catch (error) {
-    console.error('Erreur lors de la correction d\'urgence:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la correction d\'urgence',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-
-/**
- * @desc    Créer un nouveau prêt d'équipement
- * @route   POST /api/loans
- * @access  Privé
- */
-const createLoan = asyncHandler(async (req, res) => {
-  try {
-    console.log('Creating loan with body:', req.body);
-    const { equipmentId, patientId, expectedReturnDate, notes } = req.body;
-    const userId = req.user.id;
-
-    // Vérifier que l'équipement est disponible
-    const equipment = await Equipment.findById(equipmentId);
-    if (!equipment) {
-      console.log('Equipment not found:', equipmentId);
-      res.status(404);
-      throw new Error('Équipement non trouvé');
-    }
-
-    if (equipment.status !== 'available') {
-      console.log('Equipment not available, status:', equipment.status);
-      res.status(400);
-      throw new Error('Cet équipement n\'est pas disponible pour le prêt');
-    }
-
-    // Vérifier que le patient existe
-    const patient = await Patient.findById(patientId);
-    if (!patient) {
-      console.log('Patient not found:', patientId);
-      res.status(404);
-      throw new Error('Patient non trouvé');
-    }
-
-    // Corriger les activeLoans négatifs avant de continuer
-    if (patient.activeLoans < 0) {
-      console.log(`Correction du patient ${patientId}: activeLoans était ${patient.activeLoans}, mise à 0`);
-      patient.activeLoans = 0;
-      await patient.save();
-    }
-
-    // Créer le prêt avec expectedReturnDate optionnel
-    const loanData = {
-      equipment: equipmentId,
-      patient: patientId,
-      conditionBefore: equipment.condition,
-      notes,
-      createdBy: userId,
-      lastUpdatedBy: userId
-    };
-
-    // Ajouter expectedReturnDate seulement s'il est fourni
-    if (expectedReturnDate) {
-      loanData.expectedReturnDate = expectedReturnDate;
-    }
-
-    console.log('Loan data to create:', loanData);
-    const loan = await Loan.create(loanData);
-    console.log('Loan created successfully:', loan._id);
-
-    // Mettre à jour l'équipement
-    equipment.status = 'borrowed';
-    equipment.currentBorrower = {
-      name: `${patient.firstName} ${patient.lastName}`,
-      phone: patient.phone,
-      address: patient.address,
-      idCard: '',
-      lentDate: new Date()
-    };
-    equipment.loanHistory.push({
-      borrower: {
-        name: `${patient.firstName} ${patient.lastName}`,
-        phone: patient.phone,
-        address: patient.address,
-        idCard: ''
-      },
-      lentDate: new Date(),
-      condition: equipment.condition,
-      lentBy: userId
-    });
-    await equipment.save();
-
-    // Mettre à jour le patient
-    patient.borrowedEquipment.push(equipmentId);
-    // Ne pas manipuler activeLoans manuellement - le middleware du Patient s'en charge
-    await patient.save();
-
-    res.status(201).json({
-      success: true,
-      data: loan
+      ...formatPaginatedResponse(loansWithOverdue, page, limit, total),
     });
   } catch (error) {
-    console.error('Error in createLoan:', error);
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Erreur lors de la création du prêt',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    logger.error(`Erreur lors de la récupération des prêts: ${error.message}`);
+    next(error);
   }
-});
+};
 
 /**
- * @desc    Retourner un équipement emprunté
- * @route   PUT /api/loans/:id/return
- * @access  Privé
+ * @desc    Obtenir un prêt par ID
+ * @route   GET /api/loans/:id
+ * @access  Private
  */
-const returnEquipment = asyncHandler(async (req, res) => {
+export const getLoanById = async (req, res, next) => {
   try {
-    console.log('Starting returnEquipment with params:', req.params, 'body:', req.body);
-    const { condition, notes } = req.body;
-    const userId = req.user.id;
-    const loanId = req.params.id;
+    const loan = await Loan.findById(req.params.id)
+      .populate('patient', 'firstName lastName phone address')
+      .populate('equipment', 'assetId name serialNumber category type condition')
+      .populate('createdBy', 'firstName lastName email')
+      .populate('returnedBy', 'firstName lastName email')
+      .populate('cancelledBy', 'firstName lastName email');
 
-    // Validate ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(loanId)) {
-      console.error('Invalid loan ID format:', loanId);
-      return res.status(400).json({
-        success: false,
-        message: 'ID de prêt invalide',
-        error: 'INVALID_LOAN_ID',
-        loanId
-      });
-    }
-
-    console.log('Looking for loan with ID:', loanId);
-    const loan = await Loan.findById(loanId);
     if (!loan) {
-      console.error('Loan not found:', loanId);
       return res.status(404).json({
         success: false,
         message: 'Prêt non trouvé',
-        error: 'LOAN_NOT_FOUND',
-        loanId
       });
     }
 
-    console.log('Found loan:', {
-      id: loan._id,
-      status: loan.status,
-      equipment: loan.equipment,
-      patient: loan.patient
-    });
+    // Calculer isOverdue
+    const loanData = loan.toObject();
+    loanData.isOverdue = loan.status === 'active' && new Date() > loan.expectedReturnDate;
 
-    if (loan.status === LOAN_STATUS.COMPLETED) {
-      console.error('Loan already completed:', loanId);
-      return res.status(400).json({
-        success: false,
-        message: 'Ce prêt est déjà clôturé',
-        error: 'LOAN_ALREADY_COMPLETED',
-        loanId
-      });
-    }
-
-    console.log('Marking loan as returned...');
-    // Mettre à jour le prêt
-    await loan.markAsReturned(condition, notes, userId);
-    console.log('Successfully marked loan as returned:', loanId);
-
-    // Récupérer le prêt mis à jour avec les informations peuplées
-    const updatedLoan = await Loan.findById(loanId)
-      .populate('equipment', 'name type serialNumber')
-      .populate('patient', 'firstName lastName')
-      .populate('createdBy', 'name')
-      .populate('closedBy', 'name');
-
-    res.json({
+    res.status(200).json({
       success: true,
-      data: updatedLoan
+      data: loanData,
     });
   } catch (error) {
-    console.error('Error in returnEquipment:', {
-      message: error.message,
-      stack: error.stack,
-      loanId: req.params.id,
-      body: req.body
+    logger.error(`Erreur lors de la récupération du prêt: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * @desc    Créer un nouveau prêt
+ * @route   POST /api/loans
+ * @access  Private
+ */
+export const createLoanController = async (req, res, next) => {
+  try {
+    const loan = await createLoan(req.body, req.user._id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Prêt créé avec succès',
+      data: loan,
     });
+  } catch (error) {
+    // Gérer les erreurs métier spécifiques
+    const errorMessages = {
+      'PATIENT_NOT_FOUND': 'Patient non trouvé',
+      'EQUIPMENT_NOT_FOUND': 'Équipement non trouvé',
+      'EQUIPMENT_NOT_AVAILABLE': 'Équipement non disponible',
+      'EQUIPMENT_IN_MAINTENANCE': 'Équipement en maintenance',
+      'EQUIPMENT_LOST': 'Équipement perdu',
+      'EQUIPMENT_DECOMMISSIONED': 'Équipement déclassé',
+      'EQUIPMENT_ALREADY_LOANED': 'Cet équipement est déjà prêté',
+      'INVALID_RETURN_DATE': 'La date de retour doit être postérieure à la date de prêt',
+      'INVALID_CONDITION': 'Condition invalide'
+    };
+
+    const message = errorMessages[error.message] || error.message;
+    const statusCode = error.message === 'EQUIPMENT_ALREADY_LOANED' ? 409 : 400;
+
+    logger.error(`Erreur lors de la création de prêt: ${error.message}`);
     
-    res.status(500).json({
+    return res.status(statusCode).json({
       success: false,
-      message: 'Erreur lors du retour de l\'équipement',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-      errorCode: 'RETURN_EQUIPMENT_ERROR'
+      message: message,
     });
   }
-});
+};
 
 /**
- * @desc    Obtenir les détails d'un prêt
- * @route   GET /api/loans/:id
- * @access  Privé
+ * @desc    Retourner un prêt
+ * @route   POST /api/loans/:id/return
+ * @access  Private
  */
-const getLoanDetails = asyncHandler(async (req, res) => {
-  // Validate ObjectId format
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    res.status(400);
-    throw new Error('ID de prêt invalide');
+export const returnLoanController = async (req, res, next) => {
+  try {
+    const loan = await returnLoan(req.params.id, req.body, req.user._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Prêt retourné avec succès',
+      data: loan,
+    });
+  } catch (error) {
+    const errorMessages = {
+      'LOAN_NOT_FOUND': 'Prêt non trouvé',
+      'LOAN_ALREADY_RETURNED': 'Ce prêt a déjà été retourné',
+      'LOAN_ALREADY_CANCELLED': 'Ce prêt a déjà été annulé',
+      'INVALID_LOAN_STATUS': 'Statut de prêt invalide',
+      'INVALID_CONDITION': 'Condition invalide'
+    };
+
+    const message = errorMessages[error.message] || error.message;
+
+    logger.error(`Erreur lors du retour de prêt: ${error.message}`);
+    
+    return res.status(400).json({
+      success: false,
+      message: message,
+    });
   }
+};
 
-  const loan = await Loan.findById(req.params.id)
-    .populate('equipment', 'name type serialNumber')
-    .populate('patient', 'firstName lastName phone')
-    .populate('createdBy', 'name')
-    .populate('closedBy', 'name');
-
-  if (!loan) {
-    res.status(404);
-    throw new Error('Prêt non trouvé');
-  }
-
-  res.json({
-    success: true,
-    data: loan
-  });
-});
-
-/**
- * @desc    Obtenir la liste des prêts actifs
- * @route   GET /api/loans/active
- * @access  Privé
- */
 /**
  * @desc    Annuler un prêt
- * @route   PATCH /api/loans/:id/cancel
- * @access  Privé (admin, medical)
+ * @route   POST /api/loans/:id/cancel
+ * @access  Private
  */
-
-
-const deleteLoan = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({
-      success: false,
-      message: 'ID de prêt invalide'
-    });
-  }
-
-  const loan = await Loan.findById(id);
-  if (!loan) {
-    return res.status(404).json({
-      success: false,
-      message: 'Prêt non trouvé'
-    });
-  }
-
-  await loan.deleteOne();
-
-  res.json({
-    success: true,
-    message: 'Prêt supprimé avec succès'
-  });
-});
-
-const cancelLoan = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { reason } = req.body;
-  const userId = req.user.id;
-
-  // Valider l'ID
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({
-      success: false,
-      message: 'ID de prêt invalide',
-      error: 'INVALID_LOAN_ID'
-    });
-  }
-
-  // Trouver le prêt
-  const loan = await Loan.findById(id);
-  if (!loan) {
-    return res.status(404).json({
-      success: false,
-      message: 'Prêt non trouvé',
-      error: 'LOAN_NOT_FOUND'
-    });
-  }
-
-  // Vérifier si le prêt est déjà annulé
-  if (loan.status === LOAN_STATUS.CANCELLED) {
-    return res.status(400).json({
-      success: false,
-      message: 'Ce prêt est déjà annulé',
-      error: 'LOAN_ALREADY_CANCELLED'
-    });
-  }
-
-  // Vérifier si le prêt est déjà clôturé
-  if (loan.status === LOAN_STATUS.COMPLETED) {
-    return res.status(400).json({
-      success: false,
-      message: 'Impossible d\'annuler un prêt déjà clôturé',
-      error: 'LOAN_ALREADY_COMPLETED'
-    });
-  }
-
+export const cancelLoanController = async (req, res, next) => {
   try {
-    // Mettre à jour le statut du prêt
-    loan.status = LOAN_STATUS.CANCELLED;
-    loan.cancellationReason = reason;
-    loan.closedBy = userId;
-    loan.closedAt = new Date();
-    loan.lastUpdatedBy = userId;
-    await loan.save();
+    const loan = await cancelLoan(req.params.id, req.body, req.user._id);
 
-    // Mettre à jour le statut de l'équipement
-    const Equipment = mongoose.model('Equipment');
-    await Equipment.findByIdAndUpdate(loan.equipment, {
-      $set: {
-        status: 'available',
-        currentBorrower: null,
-        updatedAt: new Date()
-      }
-    });
-
-    // Mettre à jour le compteur de prêts actifs du patient
-    const Patient = mongoose.model('Patient');
-    await Patient.findByIdAndUpdate(
-      loan.patient,
-      {
-        $pull: { borrowedEquipment: loan.equipment }
-        // Ne pas manipuler activeLoans manuellement - le middleware du Patient s'en charge
-      }
-    );
-
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'Prêt annulé avec succès',
-      data: loan
-    });
-
-  } catch (error) {
-    console.error('Erreur lors de l\'annulation du prêt:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de l\'annulation du prêt',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-
-const getActiveLoans = asyncHandler(async (req, res) => {
-  try {
-    console.log('Fetching active loans with query:', req.query);
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    // Get total count of active loans
-    const total = await Loan.countDocuments({ status: LOAN_STATUS.ACTIVE });
-    
-
-    
-    // Get paginated loans - trier par startDate si expectedReturnDate est null
-    const loans = await Loan.find({ status: LOAN_STATUS.ACTIVE })
-      .sort({ startDate: 1 }) // Changé de expectedReturnDate à startDate
-      .skip(skip)
-      .limit(parseInt(limit))
-      .populate([
-        { path: 'equipment', select: 'name type serialNumber' },
-        { path: 'patient', select: 'firstName lastName' },
-        { path: 'createdBy', select: 'name' }
-      ]);
-
-    console.log('Found loans:', loans.length);
-    
-    res.json({
-      success: true,
-      count: loans.length,
-      data: loans,
-      totalPages: Math.ceil(total / parseInt(limit)),
-      currentPage: parseInt(page)
+      data: loan,
     });
   } catch (error) {
-    console.error('Error in getActiveLoans:', {
-      message: error.message,
-      stack: error.stack,
-      query: req.query
-    });
-    res.status(500).json({
+    const errorMessages = {
+      'LOAN_NOT_FOUND': 'Prêt non trouvé',
+      'LOAN_ALREADY_RETURNED': 'Ce prêt a déjà été retourné',
+      'LOAN_ALREADY_CANCELLED': 'Ce prêt a déjà été annulé',
+      'INVALID_LOAN_STATUS': 'Statut de prêt invalide',
+      'CANCELLATION_REASON_REQUIRED': 'La raison d\'annulation est obligatoire'
+    };
+
+    const message = errorMessages[error.message] || error.message;
+
+    logger.error(`Erreur lors de l'annulation de prêt: ${error.message}`);
+    
+    return res.status(400).json({
       success: false,
-      message: 'Erreur lors de la récupération des prêts actifs',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: message,
     });
   }
-});
-
-/**
- * @desc    Obtenir l'historique des prêts
- * @route   GET /api/loans/history
- * @access  Privé
- */
-const getLoanHistory = asyncHandler(async (req, res) => {
-  const { 
-    page = 1, 
-    limit = 10, 
-    patientId, 
-    equipmentId, 
-    status,
-    startDate,
-    endDate
-  } = req.query;
-
-  const query = {};
-  
-  if (patientId) query.patient = patientId;
-  if (equipmentId) query.equipment = equipmentId;
-  if (status) query.status = status;
-  
-  if (startDate || endDate) {
-    query.startDate = {};
-    if (startDate) query.startDate.$gte = new Date(startDate);
-    if (endDate) query.startDate.$lte = new Date(endDate);
-  }
-
-  const options = {
-    page: parseInt(page),
-    limit: parseInt(limit),
-    sort: { startDate: -1 },
-    populate: [
-      { path: 'equipment', select: 'name type serialNumber' },
-      { path: 'patient', select: 'firstName lastName' },
-      { path: 'createdBy', select: 'name' },
-      { path: 'closedBy', select: 'name' }
-    ]
-  };
-
-  const history = await Loan.paginate(query, options);
-
-  res.json({
-    success: true,
-    count: history.totalDocs,
-    data: history.docs,
-    totalPages: history.totalPages,
-    currentPage: history.page
-  });
-});
+};
 
 /**
  * @desc    Obtenir les statistiques des prêts
  * @route   GET /api/loans/stats
- * @access  Privé
+ * @access  Private
  */
-const getLoanStats = asyncHandler(async (req, res) => {
-  const [
-    totalLoans,
-    activeLoans,
-    overdueLoans,
-    equipmentStats,
-    patientStats
-  ] = await Promise.all([
-    // Nombre total de prêts
-    Loan.countDocuments(),
-    
-    // Nombre de prêts actifs
-    Loan.countDocuments({ status: LOAN_STATUS.ACTIVE }),
-    
-    // Nombre de prêts en retard (uniquement ceux avec une date de retour définie)
-    Loan.countDocuments({
-      status: LOAN_STATUS.ACTIVE,
-      expectedReturnDate: { $exists: true, $lt: new Date() }
-    }),
-    
-    // Statistiques par type d'équipement
-    Loan.aggregate([
-      { $match: { status: LOAN_STATUS.ACTIVE } },
-      { $lookup: { from: 'equipment', localField: 'equipment', foreignField: '_id', as: 'equipment' } },
-      { $unwind: '$equipment' },
-      { $group: { _id: '$equipment.type', count: { $sum: 1 } } }
-    ]),
-    
-    // Top patients avec le plus de prêts
-    Loan.aggregate([
-      { $group: { _id: '$patient', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 5 },
-      { $lookup: { from: 'patients', localField: '_id', foreignField: '_id', as: 'patient' } },
-      { $unwind: '$patient' },
-      { $project: { _id: 0, patient: { $concat: ['$patient.firstName', ' ', '$patient.lastName'] }, count: 1 } }
-    ])
-  ]);
+export const getLoanStatsController = async (req, res, next) => {
+  try {
+    const stats = await getLoanStats();
 
-  res.json({
-    success: true,
-    data: {
-      totalLoans,
-      activeLoans,
-      overdueLoans,
-      equipmentStats,
-      topBorrowers: patientStats
+    res.status(200).json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    logger.error(`Erreur lors de la récupération des statistiques: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * @desc    Obtenir les prêts en retard
+ * @route   GET /api/loans/overdue
+ * @access  Private
+ */
+export const getOverdueLoansController = async (req, res, next) => {
+  try {
+    const loans = await getOverdueLoans();
+
+    // Calculer isOverdue pour chaque prêt
+    const loansWithOverdue = loans.map(loan => ({
+      ...loan.toObject(),
+      isOverdue: true // Par définition, ce sont des prêts en retard
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: loansWithOverdue,
+    });
+  } catch (error) {
+    logger.error(`Erreur lors de la récupération des prêts en retard: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * @desc    Obtenir l'historique des prêts d'un patient
+ * @route   GET /api/loans/patient/:patientId
+ * @access  Private
+ */
+export const getLoansByPatientController = async (req, res, next) => {
+  try {
+    const loans = await getLoansByPatient(req.params.patientId);
+
+    // Calculer isOverdue pour chaque prêt
+    const loansWithOverdue = loans.map(loan => ({
+      ...loan.toObject(),
+      isOverdue: loan.status === 'active' && new Date() > loan.expectedReturnDate
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: loansWithOverdue,
+    });
+  } catch (error) {
+    logger.error(`Erreur lors de la récupération des prêts du patient: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * @desc    Obtenir l'historique des prêts d'un équipement
+ * @route   GET /api/loans/equipment/:equipmentId
+ * @access  Private
+ */
+export const getLoansByEquipmentController = async (req, res, next) => {
+  try {
+    const loans = await getLoansByEquipment(req.params.equipmentId);
+
+    // Calculer isOverdue pour chaque prêt
+    const loansWithOverdue = loans.map(loan => ({
+      ...loan.toObject(),
+      isOverdue: loan.status === 'active' && new Date() > loan.expectedReturnDate
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: loansWithOverdue,
+    });
+  } catch (error) {
+    logger.error(`Erreur lors de la récupération des prêts de l'équipement: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * @desc    Obtenir le résumé des équipements par type et catégorie
+ * @route   GET /api/loans/equipment-summary
+ * @access  Private
+ */
+export const getEquipmentSummaryController = async (req, res, next) => {
+  try {
+    const summary = await getEquipmentSummary();
+
+    res.status(200).json({
+      success: true,
+      data: summary,
+    });
+  } catch (error) {
+    logger.error(`Erreur lors de la récupération du résumé des équipements: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * @desc    Obtenir les équipements d'un type et catégorie spécifiques
+ * @route   GET /api/loans/equipment-by-type
+ * @access  Private
+ */
+export const getEquipmentByTypeCategoryController = async (req, res, next) => {
+  try {
+    const { type, category, filter } = req.query;
+
+    if (!type || !category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Les paramètres type et category sont requis',
+      });
     }
-  });
-});
 
-export {
-  createLoan,
-  returnEquipment,
-  getLoanDetails,
-  getActiveLoans,
-  cancelLoan,
-  getLoanHistory,
-  getLoanStats,
-  deleteLoan,
-  fixActiveLoans,
-  emergencyFix
+    const equipment = await getEquipmentByTypeCategory(type, category, filter);
+
+    res.status(200).json({
+      success: true,
+      data: equipment,
+    });
+  } catch (error) {
+    logger.error(`Erreur lors de la récupération des équipements par type/catégorie: ${error.message}`);
+    next(error);
+  }
 };

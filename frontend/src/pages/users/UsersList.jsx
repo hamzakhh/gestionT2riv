@@ -32,7 +32,7 @@ import {
   Security as SecurityIcon,
 } from '@mui/icons-material';
 import MainCard from 'components/MainCard';
-import userService from 'api/userService';
+import { getUsers, deleteUser } from 'services/userService';
 
 const UsersList = () => {
   const [users, setUsers] = useState([]);
@@ -45,23 +45,8 @@ const UsersList = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const data = await userService.getUsers();
-        console.log('Réponse API users:', data);
-        console.log('Array.isArray(data):', Array.isArray(data));
-        console.log('data.data existe?', !!data.data);
-        
-        // Gérer différents formats de réponse
-        let usersData = [];
-        if (data && data.data && data.data.users && Array.isArray(data.data.users)) {
-          usersData = data.data.users;
-        } else if (data && Array.isArray(data)) {
-          usersData = data;
-        } else if (data && data.docs && Array.isArray(data.docs)) {
-          usersData = data.docs;
-        }
-        
-        console.log('Données utilisateurs finales:', usersData);
-        setUsers(Array.isArray(usersData) ? usersData : []);
+        const data = await getUsers();
+        setUsers(Array.isArray(data) ? data : []);
       } catch (err) {
         setError(err.message || 'Erreur lors du chargement des utilisateurs');
       } finally {
@@ -75,7 +60,7 @@ const UsersList = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
       try {
-        await userService.deleteUser(id);
+        await deleteUser(id);
         setUsers(Array.isArray(users) ? users.filter(user => user._id !== id) : []);
       } catch (err) {
         setError('Erreur lors de la suppression de l\'utilisateur');

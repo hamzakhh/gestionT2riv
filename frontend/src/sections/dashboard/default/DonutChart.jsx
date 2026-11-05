@@ -5,9 +5,8 @@ import { Box, useMediaQuery } from '@mui/material';
 
 // Sample data for the donut chart
 const data = [
-  { value: 60, label: 'Zakat', color: 'primary' },
-  { value: 25, label: 'Ramadan', color: 'secondary' },
-  { value: 15, label: 'Autres', color: 'warning' },
+  { value: 70, label: 'Ramadan', color: 'primary' },
+  { value: 30, label: 'Autres', color: 'secondary' },
 ];
 
 // ==============================|| DONUT CHART ||============================== //

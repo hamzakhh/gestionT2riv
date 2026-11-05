@@ -13,13 +13,6 @@ export default function StatsDonutChart({ stats }) {
   // Données pour le graphique
   const data = [
     { 
-      id: 'orphans', 
-      value: stats.orphans?.total || 0, 
-      label: 'Orphelins',
-      color: 'primary',
-      icon: '👨‍👧‍👦'
-    },
-    { 
       id: 'equipment', 
       value: stats.equipment?.total || 0, 
       label: 'Équipements', 

@@ -126,123 +126,15 @@ export default function Notification() {
                       }
                     }}
                   >
-                    <ListItem
-                      component={ListItemButton}
-                      divider
-                      selected={read > 0}
-                      secondaryAction={
-                        <Typography variant="caption" noWrap>
-                          3:00 AM
-                        </Typography>
-                      }
-                    >
-                      <ListItemAvatar>
-                        <Avatar sx={{ color: 'success.main', bgcolor: 'success.lighter' }}>
-                          <GiftOutlined />
-                        </Avatar>
-                      </ListItemAvatar>
+                    <ListItem>
                       <ListItemText
                         primary={
-                          <Typography variant="h6">
-                            It&apos;s{' '}
-                            <Typography component="span" variant="subtitle1">
-                              Cristina danny&apos;s
-                            </Typography>{' '}
-                            birthday today.
+                          <Typography variant="body2" align="center" sx={{ py: 2 }}>
+                            Aucune notification
                           </Typography>
                         }
-                        secondary="2 min ago"
                       />
                     </ListItem>
-                    <ListItem
-                      component={ListItemButton}
-                      divider
-                      secondaryAction={
-                        <Typography variant="caption" noWrap>
-                          6:00 AM
-                        </Typography>
-                      }
-                    >
-                      <ListItemAvatar>
-                        <Avatar sx={{ color: 'primary.main', bgcolor: 'primary.lighter' }}>
-                          <MessageOutlined />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Typography variant="h6">
-                            <Typography component="span" variant="subtitle1">
-                              Aida Burg
-                            </Typography>{' '}
-                            commented your post.
-                          </Typography>
-                        }
-                        secondary="5 August"
-                      />
-                    </ListItem>
-                    <ListItem
-                      component={ListItemButton}
-                      divider
-                      selected={read > 0}
-                      secondaryAction={
-                        <Typography variant="caption" noWrap>
-                          2:45 PM
-                        </Typography>
-                      }
-                    >
-                      <ListItemAvatar>
-                        <Avatar sx={{ color: 'error.main', bgcolor: 'error.lighter' }}>
-                          <SettingOutlined />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Typography variant="h6">
-                            Your Profile is Complete &nbsp;
-                            <Typography component="span" variant="subtitle1">
-                              60%
-                            </Typography>{' '}
-                          </Typography>
-                        }
-                        secondary="7 hours ago"
-                      />
-                    </ListItem>
-                    <ListItem
-                      component={ListItemButton}
-                      divider
-                      secondaryAction={
-                        <Typography variant="caption" noWrap>
-                          9:10 PM
-                        </Typography>
-                      }
-                    >
-                      <ListItemAvatar>
-                        <Avatar sx={{ color: 'primary.main', bgcolor: 'primary.lighter' }}>C</Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Typography variant="h6">
-                            <Typography component="span" variant="subtitle1">
-                              Cristina Danny
-                            </Typography>{' '}
-                            invited to join{' '}
-                            <Typography component="span" variant="subtitle1">
-                              Meeting.
-                            </Typography>
-                          </Typography>
-                        }
-                        secondary="Daily scrum meeting time"
-                      />
-                    </ListItem>
-                    <ListItemButton sx={{ textAlign: 'center', py: `${12}px !important` }}>
-                      <ListItemText
-                        primary={
-                          <Typography variant="h6" color="primary">
-                            View All
-                          </Typography>
-                        }
-                      />
-                    </ListItemButton>
                   </List>
                 </MainCard>
               </ClickAwayListener>

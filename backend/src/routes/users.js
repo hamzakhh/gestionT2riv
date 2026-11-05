@@ -1,6 +1,6 @@
 import express from 'express';
 import { getAllUsers, createUser, getUser, updateUser, deleteUser } from '../controllers/userController.js';
-import { protect, restrictTo } from '../controllers/authController.js';
+import { protect, authorize } from '../middleware/auth.js';
 import { ROLES } from '../config/constants.js';
 
 const router = express.Router();
@@ -9,7 +9,7 @@ const router = express.Router();
 router.use(protect);
 
 // Restreindre l'accès aux administrateurs uniquement
-router.use(restrictTo(ROLES.ADMIN));
+router.use(authorize(ROLES.ADMIN));
 
 router
   .route('/')

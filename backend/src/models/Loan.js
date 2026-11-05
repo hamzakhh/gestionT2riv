@@ -1,66 +1,115 @@
 import mongoose from 'mongoose';
-import mongoosePaginate from 'mongoose-paginate-v2';
-import { LOAN_STATUS } from '../config/constants.js';
+import { LOAN_STATUS, EQUIPMENT_CONDITION } from '../config/constants.js';
 
 const loanSchema = new mongoose.Schema({
-  equipment: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Equipment',
-    required: [true, 'L\'équipement est requis'],
-    index: true
-  },
+  // Références
   patient: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Patient',
     required: [true, 'Le patient est requis'],
     index: true
   },
-  startDate: {
+  equipment: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Equipment',
+    required: [true, 'L\'équipement est requis']
+  },
+
+  // Dates
+  loanDate: {
     type: Date,
+    required: [true, 'La date de prêt est requise'],
     default: Date.now,
-    required: true
+    index: true
   },
   expectedReturnDate: {
     type: Date,
-    required: false // Rendu optionnel
+    required: [true, 'La date de retour attendue est requise'],
+    validate: {
+      validator: function(value) {
+        return value > this.loanDate;
+      },
+      message: 'La date de retour doit être postérieure à la date de prêt'
+    },
+    index: true
   },
-  actualReturnDate: Date,
+  actualReturnDate: {
+    type: Date,
+    default: null
+  },
+  cancelledDate: {
+    type: Date,
+    default: null
+  },
+
+  // Statut
   status: {
     type: String,
     enum: Object.values(LOAN_STATUS),
+    required: true,
     default: LOAN_STATUS.ACTIVE,
-    required: true
+    index: true
+  },
+
+  // Condition
+  conditionAtLoan: {
+    type: String,
+    enum: Object.values(EQUIPMENT_CONDITION),
+    required: [true, 'La condition au prêt est requise']
+  },
+  conditionAtReturn: {
+    type: String,
+    enum: Object.values(EQUIPMENT_CONDITION),
+    default: null
+  },
+
+  // Notes
+  notes: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Les notes ne peuvent dépasser 1000 caractères']
+  },
+  returnNotes: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Les notes de retour ne peuvent dépasser 1000 caractères']
   },
   cancellationReason: {
     type: String,
-    default: ''
+    trim: true,
+    required: function() {
+      return this.status === LOAN_STATUS.CANCELLED;
+    },
+    maxlength: [500, 'La raison d\'annulation ne peut dépasser 500 caractères']
   },
-  cancelledAt: {
-    type: Date
-  },
-  cancelledBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  conditionBefore: {
-    type: String,
-    required: [true, 'L\'état initial de l\'équipement est requis']
-  },
-  conditionAfter: String,
-  notes: String,
+
+  // Audit
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: [true, 'Le créateur est requis']
   },
-  closedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  lastUpdatedBy: {
+  returnedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    default: null
+  },
+  cancelledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+
+  // Méta-données pour migration legacy
+  isLegacyData: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  legacySource: {
+    type: String,
+    enum: ['patient_borrowedEquipment', null],
+    default: null
   }
 }, {
   timestamps: true,
@@ -68,100 +117,34 @@ const loanSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Index pour les requêtes fréquentes
-loanSchema.index({ status: 1 });
-loanSchema.index({ expectedReturnDate: 1 }, { sparse: true }); // Index partiel car le champ est optionnel
-loanSchema.index({ patient: 1, status: 1 });
-loanSchema.index({ equipment: 1, status: 1 });
+// Virtual pour calculer si en retard
+loanSchema.virtual('isOverdue').get(function() {
+  if (this.status !== LOAN_STATUS.ACTIVE) return false;
+  return new Date() > this.expectedReturnDate;
+});
 
-// Méthode pour marquer un prêt comme retourné
-loanSchema.methods.markAsReturned = async function(conditionAfter, notes, userId) {
-  this.status = LOAN_STATUS.COMPLETED;
-  this.actualReturnDate = new Date();
-  this.conditionAfter = conditionAfter;
-  this.notes = notes;
-  this.closedBy = userId;
-  this.lastUpdatedBy = userId;
-  
-  // Save the loan first to ensure we have the latest data
-  await this.save();
-  
-  const Equipment = mongoose.model('Equipment');
-  const Patient = mongoose.model('Patient');
-  
-  try {
-    // 1. First find the equipment
-    const equipment = await Equipment.findById(this.equipment);
-    if (!equipment) {
-      throw new Error('Equipment not found');
-    }
-
-    // 2. Find the loan in history
-    const loanHistoryIndex = equipment.loanHistory.findIndex(
-      entry => entry.loanId && entry.loanId.toString() === this._id.toString()
-    );
-
-    // 3. Prepare the update object
-    const update = {
-      $set: {
-        status: 'available',
-        currentBorrower: null,
-        condition: conditionAfter,
-        updatedAt: new Date()
-      }
-    };
-
-    // 4. If loan is in history, update it, otherwise add a new entry
-    if (loanHistoryIndex >= 0) {
-      // Update existing history entry
-      update.$set[`loanHistory.${loanHistoryIndex}.returnedDate`] = this.actualReturnDate;
-      update.$set[`loanHistory.${loanHistoryIndex}.condition`] = conditionAfter;
-      update.$set[`loanHistory.${loanHistoryIndex}.notes`] = notes;
-      update.$set[`loanHistory.${loanHistoryIndex}.returnedBy`] = userId;
-    } else {
-      // Add new history entry
-      const loan = await this.constructor.findById(this._id)
-        .populate('patient', 'firstName lastName phone address')
-        .populate('createdBy', 'name');
-
-      const newHistoryEntry = {
-        loanId: this._id,
-        borrower: {
-          name: loan.patient ? `${loan.patient.firstName} ${loan.patient.lastName}` : 'Inconnu',
-          phone: loan.patient?.phone || '',
-          address: loan.patient?.address || '',
-          idCard: ''
-        },
-        lentDate: this.startDate,
-        returnedDate: this.actualReturnDate,
-        condition: conditionAfter,
-        notes: notes,
-        lentBy: this.createdBy,
-        returnedBy: userId
-      };
-
-      update.$push = { loanHistory: newHistoryEntry };
-    }
-
-    // 5. Apply all updates
-    await Equipment.findByIdAndUpdate(this.equipment, update);
-
-    // 6. Update the patient's borrowed equipment
-    await Patient.findByIdAndUpdate(
-      this.patient,
-      {
-        $pull: { borrowedEquipment: this.equipment }
-        // Ne pas manipuler activeLoans manuellement - le middleware du Patient s'en charge
-      }
-    );
-
-  } catch (error) {
-    console.error('Error in markAsReturned:', error);
-    throw error;
+// Index unique partiel pour empêcher deux Loans actifs sur le même équipement
+loanSchema.index(
+  { equipment: 1, status: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: LOAN_STATUS.ACTIVE }
   }
-};
+);
 
-// Add pagination plugin to the schema
-loanSchema.plugin(mongoosePaginate);
+// Index pour filtres par patient
+loanSchema.index({ patient: 1, status: 1 });
+
+// Index pour prêts en retard (calculé)
+loanSchema.index({ status: 1, expectedReturnDate: 1 });
+
+// Index pour historique patient (tri par date)
+loanSchema.index({ patient: 1, loanDate: -1 });
+
+// Index pour historique equipment (tri par date)
+loanSchema.index({ equipment: 1, loanDate: -1 });
+
+// Index composé pour requêtes complexes
+loanSchema.index({ patient: 1, status: 1, loanDate: -1 });
 
 export default mongoose.model('Loan', loanSchema);

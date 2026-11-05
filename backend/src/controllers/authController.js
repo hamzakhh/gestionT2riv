@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import logger from '../utils/logger.js';
-import AppError from '../utils/AppError.js';
 
 /**
  * Générer un token JWT
@@ -12,63 +11,6 @@ const generateToken = (id) => {
   });
 };
 
-// Protéger les routes - vérifie si l'utilisateur est authentifié
-export const protect = async (req, res, next) => {
-  try {
-    // 1) Récupérer le token et vérifier s'il existe
-    let token;
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith('Bearer')
-    ) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-
-    if (!token) {
-      return next(
-        new AppError('Vous n\'êtes pas connecté. Veuillez vous connecter pour accéder à cette ressource.', 401)
-      );
-    }
-
-    // 2) Vérifier le token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // 3) Vérifier si l'utilisateur existe toujours
-    const currentUser = await User.findById(decoded.id);
-    if (!currentUser) {
-      return next(
-        new AppError('L\'utilisateur associé à ce token n\'existe plus.', 401)
-      );
-    }
-
-    // 4) Vérifier si l'utilisateur a changé son mot de passe après l'émission du token
-    if (currentUser.changedPasswordAfter(decoded.iat)) {
-      return next(
-        new AppError('Le mot de passe a été modifié récemment. Veuillez vous reconnecter.', 401)
-      );
-    }
-
-    // 5) Accorder l'accès à la route protégée
-    req.user = currentUser;
-    next();
-  } catch (error) {
-    return next(new AppError('Erreur d\'authentification. Veuillez vous reconnecter.', 401));
-  }
-};
-
-// Restreindre l'accès en fonction des rôles
-export const restrictTo = (...roles) => {
-  return (req, res, next) => {
-    // roles est un tableau ['admin', 'manager', etc.]
-    if (!roles.includes(req.user.role)) {
-      return next(
-        new AppError('Vous n\'avez pas la permission d\'effectuer cette action', 403)
-      );
-    }
-    next();
-  };
-};
-
 /**
  * @desc    Inscription d'un nouvel utilisateur
  * @route   POST /api/auth/register
@@ -76,16 +18,16 @@ export const restrictTo = (...roles) => {
  */
 export const register = async (req, res, next) => {
   try {
-    const { username, email, password, firstName, lastName, role, phone } = req.body;
+    const { username, email, password, firstName, lastName, phone } = req.body;
 
-    // Créer l'utilisateur
+    // Créer l'utilisateur avec le rôle par défaut (USER)
+    // Le rôle n'est pas accepté depuis le body pour des raisons de sécurité
     const user = await User.create({
       username,
       email,
       password,
       firstName,
       lastName,
-      role,
       phone,
     });
 

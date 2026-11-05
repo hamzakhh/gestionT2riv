@@ -41,6 +41,14 @@ const protect = async (req, res, next) => {
       });
     }
 
+    // Vérifier si le mot de passe a été modifié après l'émission du token
+    if (req.user.changedPasswordAfter(decoded.iat)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Le mot de passe a été modifié récemment. Veuillez vous reconnecter.',
+      });
+    }
+
     next();
   } catch (error) {
     return res.status(401).json({
@@ -85,6 +93,11 @@ const authorizePage = (requiredPage) => {
       });
     }
 
+    // Les admins ont accès à toutes les pages
+    if (req.user.role === ROLES.ADMIN) {
+      return next();
+    }
+
     if (!req.user.pagePermissions || !req.user.pagePermissions.includes(requiredPage)) {
       return res.status(403).json({
         success: false,
@@ -122,6 +135,7 @@ const optionalAuth = async (req, res, next) => {
 export {
   protect,
   authorize,
+  authorizePage,
   optionalAuth,
   ROLES,
 };

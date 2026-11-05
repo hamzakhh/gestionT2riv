@@ -16,19 +16,15 @@ dotenv.config();
 import connectDB from './config/database.js';
 import logger from './utils/logger.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
+import { protect } from './middleware/auth.js';
 
 // Importer les routes
 import authRoutes from './routes/auth.js';
 import equipmentRoutes from './routes/equipment.js';
-import orphanRoutes from './routes/orphans.js';
-import donorRoutes from './routes/donors.js';
-import donationRoutes from './routes/donations.js';
-import volunteerRoutes from './routes/volunteerRoutes.js';
 import userRoutes from './routes/users.js';
 import patientRoutes from './routes/patientRoutes.js';
-import loanRoutes from './routes/loans.js';
-import ramadhanRoutes from './routes/ramadhan.js';
-import zakatRoutes from './routes/zakat.js';
+import loanRoutes from './routes/loanRoutes.js';
+import fileRoutes from './routes/fileRoutes.js';
 
 // Initialiser l'application
 const app = express();
@@ -47,27 +43,126 @@ connectDB();
 // -----------------------
 // Middleware globaux
 // -----------------------
+// Configuration CORS dynamique basée sur l'environnement
+
+// Origines autorisées en développement (localhost uniquement)
+const developmentOrigins = [
+  'http://localhost:5175',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5175',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+];
+
+// Fonction pour construire la liste des origines autorisées
+const getAllowedOrigins = () => {
+  const origins = [];
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+
+  // En développement: autoriser uniquement localhost
+  if (isDevelopment) {
+    origins.push(...developmentOrigins);
+  }
+
+  // En production: autoriser uniquement FRONTEND_URL (configuré dans .env)
+  // Localhost n'est PAS autorisé en production pour des raisons de sécurité
+  if (!isDevelopment && process.env.FRONTEND_URL) {
+    // Vérification supplémentaire: ne pas autoriser localhost en production
+    const frontendUrl = process.env.FRONTEND_URL;
+    const isLocalhost = frontendUrl.includes('localhost') || 
+                       frontendUrl.includes('127.0.0.1');
+    
+    if (!isLocalhost) {
+      origins.push(frontendUrl);
+    } else {
+      logger.warn('⚠️  FRONTEND_URL contient localhost en production. Ignoré pour des raisons de sécurité.');
+    }
+  }
+
+  return origins;
+};
+
+// Fonction pour valider qu'une origin est une URL valide
+const isValidOrigin = (origin) => {
+  try {
+    const url = new URL(origin);
+    // L'origin doit être https en production (sauf localhost en développement)
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    const isLocalhost = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    
+    if (!isDevelopment && !isLocalhost && url.protocol !== 'https:') {
+      return false;
+    }
+    
+    // Pas de path, paramètres ou fragment dans l'origin autorisée
+    if (url.pathname !== '/' || url.search !== '' || url.hash !== '') {
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+// Fonction pour vérifier si une origin est autorisée (comparaison stricte)
+const isOriginAllowed = (origin) => {
+  if (!origin) return true; // Requêtes sans origin (Postman, mobile, server-to-server)
+  
+  // Valider que l'origin de la requête est une URL valide
+  if (!isValidOrigin(origin)) {
+    return false;
+  }
+  
+  const allowedOrigins = getAllowedOrigins();
+  
+  // Comparaison stricte des origins
+  for (const allowedOrigin of allowedOrigins) {
+    try {
+      const allowedUrl = new URL(allowedOrigin);
+      const requestUrl = new URL(origin);
+      
+      // Comparer les origins (protocol + hostname + port)
+      if (allowedUrl.origin === requestUrl.origin) {
+        return true;
+      }
+    } catch (error) {
+      // Si l'origin autorisée est invalide, l'ignorer
+      continue;
+    }
+  }
+  
+  return false;
+};
+
+// Configuration CORS avec callback dynamique
 const corsOptions = {
-  origin: [
-    'http://localhost:5175',
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://127.0.0.1:5175',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174',
-    'https://gestiont2riv.onrender.com',
-    'https://gestiont2riv-tunisian.onrender.com',
-  ],
-  credentials: true,
+  origin: (origin, callback) => {
+    // Requêtes sans origin (Postman, mobile apps, server-to-server)
+    // Ces requêtes sont autorisées car elles ne sont pas soumises aux restrictions CORS du navigateur
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Vérifier si l'origin est autorisée (comparaison stricte)
+    if (isOriginAllowed(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS: Origin non autorisée'));
+    }
+  },
+  credentials: true, // Nécessaire pour cookies et Authorization headers
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  exposedHeaders: ['Content-Disposition'],
-  optionsSuccessStatus: 204
+  exposedHeaders: ['Content-Disposition'], // Pour les téléchargements de fichiers
+  optionsSuccessStatus: 204 // Réponse standard pour les requêtes preflight réussies
 };
+
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
@@ -127,15 +222,9 @@ app.get('/api', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       equipment: '/api/equipment',
-      orphans: '/api/orphans',
-      donors: '/api/donors',
-      donations: '/api/donations',
       patients: '/api/patients',
       users: '/api/users',
       loans: '/api/loans',
-      volunteers: '/api/volunteers',
-      ramadhan: '/api/ramadhan',
-      zakat: '/api/zakat',
     },
   });
 });
@@ -160,15 +249,9 @@ app.get('/', (req, res) => {
       health: '/health',
       auth: '/api/auth',
       equipment: '/api/equipment',
-      orphans: '/api/orphans',
-      donors: '/api/donors',
-      donations: '/api/donations',
       patients: '/api/patients',
       users: '/api/users',
       loans: '/api/loans',
-      volunteers: '/api/volunteers',
-      ramadhan: '/api/ramadhan',
-      zakat: '/api/zakat',
     },
   });
 });
@@ -180,62 +263,52 @@ const registerRoutes = (path, router) => {
 
 // Enregistrement des routes
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/files', protect, fileRoutes);
 registerRoutes('/users', userRoutes);
-registerRoutes('/volunteers', volunteerRoutes);
 registerRoutes('/patients', patientRoutes);
 registerRoutes('/equipment', equipmentRoutes);
-registerRoutes('/orphans', orphanRoutes);
-registerRoutes('/donors', donorRoutes);
-registerRoutes('/donations', donationRoutes);
 registerRoutes('/loans', loanRoutes);
-app.use('/api/ramadhan', ramadhanLimiter, ramadhanRoutes);
-registerRoutes('/zakat', zakatRoutes);
 
 // Compatibilité v1
-app.use('/api/v1/volunteers', volunteerRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/patients', patientRoutes);
 
-// Servir les fichiers uploadés
-app.use('/uploads', (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  next();
-}, express.static(path.join(__dirname, '../uploads'), {
-  setHeaders: (res) => {
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-  }
-}));
-
-// Debug endpoint pour vérifier la présence du frontend
-app.get('/__debug_frontend', (req, res) => {
-  const frontendPath = path.resolve(__dirname, '..', '..', 'frontend', 'dist');
-  const fs = require('fs');
-  res.json({
-    frontendPath,
-    exists: fs.existsSync(frontendPath),
-    files: fs.existsSync(frontendPath)
-      ? fs.readdirSync(frontendPath)
-      : []
-  });
-});
+// Note: Les fichiers uploadés sont maintenant stockés dans Supabase Storage
+// Les fichiers locaux ne sont plus servis directement en production
+// Les fichiers sont accessibles via l'endpoint /api/files/signed-url avec URLs signées temporaires
+if (process.env.NODE_ENV !== 'production') {
+  // En développement uniquement, servir les fichiers locaux pour compatibilité
+  app.use('/uploads', (req, res, next) => {
+    // Répondre aux requêtes OPTIONS preflight
+    if (req.method === 'OPTIONS') {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.header('Access-Control-Max-Age', '86400');
+      return res.sendStatus(204);
+    }
+    
+    // CORS headers pour les requêtes GET
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Type');
+    res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.header('Cross-Origin-Embedder-Policy', 'credentialless');
+    
+    next();
+  }, express.static(path.join(__dirname, 'uploads')));
+}
 
 // Servir le frontend React en production
 if (process.env.NODE_ENV === 'production') {
-  const frontendPath = path.resolve(
-    __dirname,
-    '..',
-    '..',
-    'frontend',
-    'dist'
-  );
+  // Chemin robuste vers le frontend build (depuis la racine du projet)
+  const frontendPath = path.resolve(process.cwd(), '../frontend/dist');
 
   app.use(express.static(frontendPath));
 
-  // SPA fallback (React Router)
-  app.get(/^\/(?!api).*/, (req, res) => {
+  // SPA fallback (React Router) - ne capture pas les routes API
+  app.get(/^\/(?!api|uploads|__ping|health).*/, (req, res) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
   });
 }

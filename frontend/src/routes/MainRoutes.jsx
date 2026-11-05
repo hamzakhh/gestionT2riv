@@ -6,20 +6,12 @@ import DashboardLayout from 'layout/Dashboard';
 import RoleGuard from 'components/RoleGuard';
 import { PAGES } from '../config';
 
-// render - Loans
-const LoanList = Loadable(lazy(() => import('../pages/loans/LoanList')));
-const LoanForm = Loadable(lazy(() => import('../pages/loans/LoanForm')));
-const LoanDetails = Loadable(lazy(() => import('../pages/loans/LoanDetails')));
-const ReturnEquipment = Loadable(lazy(() => import('../pages/loans/ReturnEquipment')));
-
 // render - Dashboard
 const DashboardDefault = Loadable(lazy(() => import('../pages/dashboard/default')));
 
 // render - Association pages
 const EquipmentList = Loadable(lazy(() => import('../pages/equipment/EquipmentList')));
-const OrphanList = Loadable(lazy(() => import('../pages/orphans/OrphanList')));
-const VolunteerList = Loadable(lazy(() => import('../pages/volunteers/VolunteerList')));
-const DonorList = Loadable(lazy(() => import('../pages/donors/DonorList')));
+const EquipmentDetail = Loadable(lazy(() => import('../pages/equipment/EquipmentDetail')));
 // Admin pages
 const UserManagement = Loadable(lazy(() => import('../pages/admin/UserManagement')));
 const RoleManagement = Loadable(lazy(() => import('../pages/admin/RoleManagement')));
@@ -30,12 +22,13 @@ const UserForm = Loadable(lazy(() => import('../pages/users/UserForm')));
 const UserDetails = Loadable(lazy(() => import('../pages/users/UserDetails')));
 
 // Ramadan
-const RamadhanPage = Loadable(lazy(() => import('../pages/ramadhan')));
-const DonRamadhan = Loadable(lazy(() => import('../pages/ramadhan/DonRamadhan')));
+// const RamadhanPage = Loadable(lazy(() => import('../pages/ramadhan')));
 const Patient = Loadable(lazy(() => import('../pages/patient/Patient')));
 
-// Zakat
-const ZakatList = Loadable(lazy(() => import('../pages/zakat')));
+// Loans
+const LoanList = Loadable(lazy(() => import('../pages/loans/LoanList')));
+const LoanForm = Loadable(lazy(() => import('../pages/loans/LoanForm')));
+const LoanDetail = Loadable(lazy(() => import('../pages/loans/LoanDetail')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -53,42 +46,6 @@ const MainRoutes = {
         {
           path: 'default',
           element: <RoleGuard pageKey="dashboard"><DashboardDefault /></RoleGuard>
-        }
-      ]
-    },
-    // Donors Routes
-    {
-      path: 'donors',
-      children: [
-        {
-          path: '',
-          element: <RoleGuard pageKey="donors"><DonorList /></RoleGuard>
-        }
-      ]
-    },
-    // Loans routes
-    {
-      path: 'loans',
-      children: [
-        {
-          path: '',
-          element: <RoleGuard pageKey="loans"><LoanList /></RoleGuard>
-        },
-        {
-          path: 'new',
-          element: <RoleGuard pageKey="loans"><LoanForm /></RoleGuard>
-        },
-        {
-          path: ':id',
-          element: <RoleGuard pageKey="loans"><LoanDetails /></RoleGuard>
-        },
-        {
-          path: ':id/edit',
-          element: <RoleGuard pageKey="loans"><LoanForm isEditMode /></RoleGuard>
-        },
-        {
-          path: ':id/return',
-          element: <RoleGuard pageKey="loans"><ReturnEquipment /></RoleGuard>
         }
       ]
     },
@@ -137,35 +94,32 @@ const MainRoutes = {
       path: 'patients',
       element: <RoleGuard pageKey={PAGES.PATIENTS}><Patient /></RoleGuard>
     },
+    // Routes Loans
     {
-      path: 'don-ramadhan',
-      element: <RoleGuard pageKey="don-ramadhan"><DonRamadhan /></RoleGuard>
+      path: 'loans',
+      children: [
+        {
+          path: '',
+          element: <RoleGuard pageKey={PAGES.LOANS}><LoanList /></RoleGuard>
+        },
+        {
+          path: 'create',
+          element: <RoleGuard pageKey={PAGES.LOANS}><LoanForm /></RoleGuard>
+        },
+        {
+          path: ':id',
+          element: <RoleGuard pageKey={PAGES.LOANS}><LoanDetail /></RoleGuard>
+        }
+      ]
     },
     // Routes Association
-    {
-      path: 'volunteers',
-      element: <RoleGuard pageKey="volunteers"><VolunteerList /></RoleGuard>
-    },
     {
       path: 'equipment',
       element: <RoleGuard pageKey="equipment"><EquipmentList /></RoleGuard>
     },
     {
-      path: 'orphans',
-      children: [
-        {
-          path: '',
-          element: <RoleGuard pageKey="orphans"><OrphanList /></RoleGuard>
-        },
-        {
-          path: ':id',
-          element: <RoleGuard pageKey="orphans"><OrphanList /></RoleGuard>
-        }
-      ]
-    },
-    {
-      path: 'zakat',
-      element: <RoleGuard pageKey="zakat"><ZakatList /></RoleGuard>
+      path: 'equipment/:assetId',
+      element: <RoleGuard pageKey="equipment"><EquipmentDetail /></RoleGuard>
     }
   ]
 };

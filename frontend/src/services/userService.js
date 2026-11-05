@@ -30,7 +30,6 @@ export const getUsers = async () => {
       fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim()
     }));
   } catch (error) {
-    console.error('Erreur lors de la récupération des utilisateurs:', error);
     throw error;
   }
 };
@@ -41,7 +40,6 @@ export const getUser = async (id) => {
     const response = await axios.get(`${API_ENDPOINT}/${id}`, getConfig());
     return response.data.data.user;
   } catch (error) {
-    console.error('Erreur lors de la récupération de l\'utilisateur:', error);
     throw error;
   }
 };
@@ -52,7 +50,6 @@ export const createUser = async (userData) => {
     const response = await axios.post(API_ENDPOINT, userData, getConfig());
     return response.data.data.user;
   } catch (error) {
-    console.error('Erreur lors de la création de l\'utilisateur:', error);
     throw error;
   }
 };
@@ -67,7 +64,6 @@ export const updateUser = async (id, userData) => {
     );
     return response.data.data.user;
   } catch (error) {
-    console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
     throw error;
   }
 };
@@ -77,7 +73,6 @@ export const deleteUser = async (id) => {
   try {
     await axios.delete(`${API_ENDPOINT}/${id}`, getConfig());
   } catch (error) {
-    console.error('Erreur lors de la suppression de l\'utilisateur:', error);
     throw error;
   }
 };

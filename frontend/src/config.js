@@ -16,13 +16,8 @@ export const ROLES = {
 export const PAGES = {
   DASHBOARD: 'dashboard',
   EQUIPMENT: 'equipment',
-  ORPHANS: 'orphans',
-  DONORS: 'donors',
-  VOLUNTEERS: 'volunteers',
   USERS: 'users',
   ROLE_MANAGEMENT: 'role-management',
-  ZAKAT: 'zakat',
-  DON_RAMADHAN: 'don-ramadhan',
   RAMADHAN: 'ramadhan',
   PATIENTS: 'patients',
   LOANS: 'loans'
@@ -32,17 +27,29 @@ export const PAGES = {
 
 export const EQUIPMENT_CONDITION = {
   NEW: 'Neuf',
+  EXCELLENT: 'Excellent',
   GOOD: 'Bon état',
   FAIR: 'État moyen',
   POOR: 'Mauvais état',
-  DAMAGED: 'Endommagé',
   UNUSABLE: 'Inutilisable'
 };
 
 // ==============================|| API CONFIG ||============================== //
 
-const rawApiBaseUrl = import.meta.env.VITE_API_URL || 'https://gestiont2riv.onrender.com';
-const normalizedApiBaseUrl = rawApiBaseUrl.trim().replace(/\/+$/, '');
+const isDevelopment = import.meta.env.DEV;
+const rawApiBaseUrl = import.meta.env.VITE_API_URL;
+
+// En développement, autoriser localhost par défaut
+// En production, VITE_API_URL est obligatoire
+if (!rawApiBaseUrl) {
+  if (isDevelopment) {
+    console.warn('⚠️  VITE_API_URL non défini. Utilisation de localhost par défaut en développement.');
+  } else {
+    throw new Error('VITE_API_URL environment variable is required in production');
+  }
+}
+
+const normalizedApiBaseUrl = (rawApiBaseUrl || 'http://localhost:5000').trim().replace(/\/+$/, '');
 const API_PREFIX = '/api';
 
 // Base API = host + /api (évite les 404 quand le backend est monté sous /api)

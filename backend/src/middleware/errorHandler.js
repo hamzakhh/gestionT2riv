@@ -4,8 +4,6 @@ import logger from '../utils/logger.js';
  * Middleware de gestion des erreurs
  */
 const errorHandler = (err, req, res, next) => {
-  console.error('💥 Error caught:', err);
-  
   let error = { ...err };
   error.message = err.message;
 
@@ -85,8 +83,6 @@ const errorHandler = (err, req, res, next) => {
     message: error.message || 'Erreur serveur',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   };
-  
-  console.log('📤 Error response:', JSON.stringify(response, null, 2));
   
   if (!res.headersSent) {
     res.status(error.statusCode || 500).json(response);

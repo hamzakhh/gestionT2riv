@@ -17,9 +17,13 @@ import {
   ListItem,
   ListItemAvatar,
   ListItemText,
-  ListItemSecondaryAction
+  ListItemSecondaryAction,
+  Card,
+  CardContent,
+  Chip,
+  Tooltip
 } from '@mui/material';
-import { Delete as DeleteIcon, AddPhotoAlternate as AddPhotoIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, AddPhotoAlternate as AddPhotoIcon, PictureAsPdf as PdfIcon, Visibility as ViewIcon, CloudDownload as DownloadIcon } from '@mui/icons-material';
 
 const PatientForm = ({ patient, onSubmit, onCancel }) => {
   const formik = useFormik({
@@ -52,6 +56,27 @@ const PatientForm = ({ patient, onSubmit, onCancel }) => {
     handleSubmit,
     setFieldValue
   } = formik;
+
+  // Fonction pour afficher les informations du fichier
+  const getFileInfo = (file) => {
+    if (!file) return null;
+    const isPdf = file.type === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf');
+    const fileSize = file.size ? (file.size / 1024).toFixed(2) + ' KB' : '';
+    return { isPdf, fileSize, name: file.name };
+  };
+
+  // Fonction pour supprimer un fichier
+  const handleRemoveFile = (fieldName) => {
+    setFieldValue(fieldName, null);
+  };
+
+  // Fonction pour afficher un aperçu
+  const handleViewFile = (file) => {
+    if (file) {
+      const url = URL.createObjectURL(file);
+      window.open(url, '_blank');
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit}>
@@ -94,10 +119,15 @@ const PatientForm = ({ patient, onSubmit, onCancel }) => {
             label="Numéro de téléphone"
             name="phone"
             value={values.phone}
-            onChange={handleChange}
+            onChange={(e) => {
+              const value = e.target.value.replace(/\D/g, '').slice(0, 8);
+              setFieldValue('phone', value);
+            }}
             onBlur={handleBlur}
             fullWidth
             required
+            inputProps={{ maxLength: 8 }}
+            helperText="Maximum 8 chiffres"
           />
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -167,123 +197,318 @@ const PatientForm = ({ patient, onSubmit, onCancel }) => {
           </Grid>
         )}
         <Grid item xs={12}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="h6" component="div" sx={{ mb: 2 }}>
+          <Paper variant="outlined" sx={{ p: 3 }}>
+            <Typography variant="h6" component="div" sx={{ mb: 3, fontWeight: 600 }}>
               Documents du patient
             </Typography>
             
-            <Grid container spacing={2}>
+            <Grid container spacing={3}>
               <Grid item xs={12} md={4}>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Photo CIN / Pièce d'identité
-                  </Typography>
-                  <Button 
-                    variant="outlined" 
-                    component="label" 
-                    fullWidth
-                    startIcon={<AddPhotoIcon />}
-                  >
-                    {values.cinPhoto ? 'Changer la photo' : 'Ajouter une photo'}
-                    <input 
-                      type="file" 
-                      hidden 
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        setFieldValue('cinPhoto', file);
-                      }} 
-                    />
-                  </Button>
-                  {values.cinPhoto && (
-                    <Box sx={{ mt: 1, textAlign: 'center' }}>
-                      <Avatar 
-                        src={URL.createObjectURL(values.cinPhoto)}
-                        variant="rounded"
-                        sx={{ width: 80, height: 80, mx: 'auto' }}
-                      />
-                      <Typography variant="caption" display="block">
-                        {values.cinPhoto.name}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
+                <Card variant="outlined" sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500, color: 'primary.main' }}>
+                      📄 CIN / Pièce d'identité
+                    </Typography>
+                    
+                    {!values.cinPhoto ? (
+                      <Button 
+                        variant="outlined" 
+                        component="label" 
+                        fullWidth
+                        startIcon={<AddPhotoIcon />}
+                        sx={{ height: 60 }}
+                      >
+                        Ajouter un document
+                        <input 
+                          type="file" 
+                          hidden 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            setFieldValue('cinPhoto', file);
+                          }} 
+                        />
+                      </Button>
+                    ) : (
+                      <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          {getFileInfo(values.cinPhoto)?.isPdf ? (
+                            <Avatar 
+                              variant="rounded"
+                              sx={{ width: 50, height: 50, mr: 2, bgcolor: 'error.main' }}
+                            >
+                              <PdfIcon />
+                            </Avatar>
+                          ) : (
+                            <Avatar 
+                              src={URL.createObjectURL(values.cinPhoto)}
+                              variant="rounded"
+                              sx={{ width: 50, height: 50, mr: 2 }}
+                            />
+                          )}
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" noWrap>
+                              {getFileInfo(values.cinPhoto)?.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {getFileInfo(values.cinPhoto)?.fileSize}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button 
+                            variant="outlined" 
+                            component="label" 
+                            size="small"
+                            startIcon={<AddPhotoIcon />}
+                            sx={{ flex: 1 }}
+                          >
+                            Changer
+                            <input 
+                              type="file" 
+                              hidden 
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                setFieldValue('cinPhoto', file);
+                              }} 
+                            />
+                          </Button>
+                          <Tooltip title="Voir le document">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleViewFile(values.cinPhoto)}
+                              color="primary"
+                            >
+                              <ViewIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Supprimer">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleRemoveFile('cinPhoto')}
+                              color="error"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </Box>
+                    )}
+                  </CardContent>
+                </Card>
               </Grid>
               
               <Grid item xs={12} md={4}>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Photo du contrat
-                  </Typography>
-                  <Button 
-                    variant="outlined" 
-                    component="label" 
-                    fullWidth
-                    startIcon={<AddPhotoIcon />}
-                  >
-                    {values.contractPhoto ? 'Changer la photo' : 'Ajouter une photo'}
-                    <input 
-                      type="file" 
-                      hidden 
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        setFieldValue('contractPhoto', file);
-                      }} 
-                    />
-                  </Button>
-                  {values.contractPhoto && (
-                    <Box sx={{ mt: 1, textAlign: 'center' }}>
-                      <Avatar 
-                        src={URL.createObjectURL(values.contractPhoto)}
-                        variant="rounded"
-                        sx={{ width: 80, height: 80, mx: 'auto' }}
-                      />
-                      <Typography variant="caption" display="block">
-                        {values.contractPhoto.name}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
+                <Card variant="outlined" sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500, color: 'primary.main' }}>
+                      📋 Contrat
+                    </Typography>
+                    
+                    {!values.contractPhoto ? (
+                      <Button 
+                        variant="outlined" 
+                        component="label" 
+                        fullWidth
+                        startIcon={<AddPhotoIcon />}
+                        sx={{ height: 60 }}
+                      >
+                        Ajouter un document
+                        <input 
+                          type="file" 
+                          hidden 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            setFieldValue('contractPhoto', file);
+                          }} 
+                        />
+                      </Button>
+                    ) : (
+                      <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          {getFileInfo(values.contractPhoto)?.isPdf ? (
+                            <Avatar 
+                              variant="rounded"
+                              sx={{ width: 50, height: 50, mr: 2, bgcolor: 'error.main' }}
+                            >
+                              <PdfIcon />
+                            </Avatar>
+                          ) : (
+                            <Avatar 
+                              src={URL.createObjectURL(values.contractPhoto)}
+                              variant="rounded"
+                              sx={{ width: 50, height: 50, mr: 2 }}
+                            />
+                          )}
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" noWrap>
+                              {getFileInfo(values.contractPhoto)?.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {getFileInfo(values.contractPhoto)?.fileSize}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button 
+                            variant="outlined" 
+                            component="label" 
+                            size="small"
+                            startIcon={<AddPhotoIcon />}
+                            sx={{ flex: 1 }}
+                          >
+                            Changer
+                            <input 
+                              type="file" 
+                              hidden 
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                setFieldValue('contractPhoto', file);
+                              }} 
+                            />
+                          </Button>
+                          <Tooltip title="Voir le document">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleViewFile(values.contractPhoto)}
+                              color="primary"
+                            >
+                              <ViewIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Supprimer">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleRemoveFile('contractPhoto')}
+                              color="error"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </Box>
+                    )}
+                  </CardContent>
+                </Card>
               </Grid>
               
               <Grid item xs={12} md={4}>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Photo du carnet de santé
-                  </Typography>
-                  <Button 
-                    variant="outlined" 
-                    component="label" 
-                    fullWidth
-                    startIcon={<AddPhotoIcon />}
-                  >
-                    {values.notebookPhoto ? 'Changer la photo' : 'Ajouter une photo'}
-                    <input 
-                      type="file" 
-                      hidden 
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        setFieldValue('notebookPhoto', file);
-                      }} 
-                    />
-                  </Button>
-                  {values.notebookPhoto && (
-                    <Box sx={{ mt: 1, textAlign: 'center' }}>
-                      <Avatar 
-                        src={URL.createObjectURL(values.notebookPhoto)}
-                        variant="rounded"
-                        sx={{ width: 80, height: 80, mx: 'auto' }}
-                      />
-                      <Typography variant="caption" display="block">
-                        {values.notebookPhoto.name}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
+                <Card variant="outlined" sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500, color: 'primary.main' }}>
+                      🏥 Carnet de santé
+                    </Typography>
+                    
+                    {!values.notebookPhoto ? (
+                      <Button 
+                        variant="outlined" 
+                        component="label" 
+                        fullWidth
+                        startIcon={<AddPhotoIcon />}
+                        sx={{ height: 60 }}
+                      >
+                        Ajouter un document
+                        <input 
+                          type="file" 
+                          hidden 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            setFieldValue('notebookPhoto', file);
+                          }} 
+                        />
+                      </Button>
+                    ) : (
+                      <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          {getFileInfo(values.notebookPhoto)?.isPdf ? (
+                            <Avatar 
+                              variant="rounded"
+                              sx={{ width: 50, height: 50, mr: 2, bgcolor: 'error.main' }}
+                            >
+                              <PdfIcon />
+                            </Avatar>
+                          ) : (
+                            <Avatar 
+                              src={URL.createObjectURL(values.notebookPhoto)}
+                              variant="rounded"
+                              sx={{ width: 50, height: 50, mr: 2 }}
+                            />
+                          )}
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" noWrap>
+                              {getFileInfo(values.notebookPhoto)?.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {getFileInfo(values.notebookPhoto)?.fileSize}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button 
+                            variant="outlined" 
+                            component="label" 
+                            size="small"
+                            startIcon={<AddPhotoIcon />}
+                            sx={{ flex: 1 }}
+                          >
+                            Changer
+                            <input 
+                              type="file" 
+                              hidden 
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                setFieldValue('notebookPhoto', file);
+                              }} 
+                            />
+                          </Button>
+                          <Tooltip title="Voir le document">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleViewFile(values.notebookPhoto)}
+                              color="primary"
+                            >
+                              <ViewIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Supprimer">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleRemoveFile('notebookPhoto')}
+                              color="error"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </Box>
+                    )}
+                  </CardContent>
+                </Card>
               </Grid>
             </Grid>
+            
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Chip 
+                size="small" 
+                label="Formats acceptés: PDF, JPG, PNG" 
+                variant="outlined" 
+                color="info"
+              />
+              <Chip 
+                size="small" 
+                label="Taille max: 10MB" 
+                variant="outlined" 
+                color="info"
+              />
+            </Box>
           </Paper>
         </Grid>
         <Grid item xs={12}>

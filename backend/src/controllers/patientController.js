@@ -1,18 +1,13 @@
 import Patient from '../models/Patient.js';
 import asyncHandler from 'express-async-handler';
-import { uploadFile, deleteFile } from '../utils/fileUpload.js';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import logger from '../utils/logger.js';
+import { uploadToSupabase, deleteFromSupabase } from '../middleware/upload.js';
 
 // @desc    Récupérer tous les patients
 // @route   GET /api/patients
 // @access  Privé
 const getPatients = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, search = '', status } = req.query;
+  const { page = 1, limit = 10, search = '', lean = true } = req.query;
 
   const query = {};
 
@@ -20,17 +15,24 @@ const getPatients = asyncHandler(async (req, res) => {
     query.$text = { $search: search };
   }
 
-  if (status) {
-    query.status = status;
-  }
-
   const options = {
     page: parseInt(page),
     limit: parseInt(limit),
-    sort: { createdAt: -1 }
+    sort: { createdAt: -1 },
+    lean: lean === 'true' // Optimisation: lean pour éviter la création d'instances Mongoose
   };
 
-  const patients = await Patient.paginate(query, options);
+  // Projection pour optimiser la taille de la réponse (champs uniquement nécessaires pour l'affichage)
+  const projection = {
+    firstName: 1,
+    lastName: 1,
+    phone: 1,
+    patientType: 1,
+    createdAt: 1,
+    entryDate: 1
+  };
+
+  const patients = await Patient.paginate(query, { ...options, projection });
 
   res.json({
     success: true,
@@ -75,7 +77,27 @@ const createPatient = asyncHandler(async (req, res) => {
     exitDate
   } = req.body;
 
-  const files = req.files ? Object.values(req.files).flat().map(file => file.path.replace(/\\/g, '/')) : [];
+  // Upload des fichiers vers Supabase
+  const uploadedFiles = [];
+  if (req.files) {
+    for (const [fieldName, files] of Object.entries(req.files)) {
+      for (const file of files) {
+        try {
+          const uploadedFile = await uploadToSupabase(file, 'patients', 'patient');
+          uploadedFiles.push({
+            ...uploadedFile,
+            fieldName // Pour identifier quel champ correspond (cinPhoto, contractPhoto, etc.)
+          });
+        } catch (error) {
+          logger.error(`Erreur upload fichier ${fieldName}:`, error);
+          return res.status(500).json({
+            success: false,
+            message: `Erreur lors de l'upload du fichier ${fieldName}: ${error.message}`
+          });
+        }
+      }
+    }
+  }
 
   try {
     const patientData = {
@@ -89,7 +111,7 @@ const createPatient = asyncHandler(async (req, res) => {
       specificEquipment: patientType === 'spécifique' ? specificEquipment : '',
       ...(entryDate && { entryDate }),
       ...(exitDate && { exitDate }),
-      files
+      files: uploadedFiles
     };
 
     const patient = await Patient.create(patientData);
@@ -99,11 +121,13 @@ const createPatient = asyncHandler(async (req, res) => {
       data: patient
     });
   } catch (error) {
-    // Cleanup uploaded files in case of error
-    for (const file of files) {
-      fs.unlink(path.join(__dirname, '../..', file), (err) => {
-        if (err) console.error(`Failed to delete uploaded file: ${file}`, err);
-      });
+    // Cleanup Supabase files in case of error
+    for (const file of uploadedFiles) {
+      try {
+        await deleteFromSupabase(file.path);
+      } catch (err) {
+        logger.error(`Failed to delete Supabase file: ${file.path}`, err);
+      }
     }
 
     res.status(400).json({ success: false, message: error.message });
@@ -134,7 +158,27 @@ const updatePatient = asyncHandler(async (req, res) => {
     exitDate
   } = req.body;
 
-  const newFiles = req.files ? Object.values(req.files).flat().map(file => file.path.replace(/\\/g, '/')) : [];
+  // Upload des nouveaux fichiers vers Supabase
+  const uploadedFiles = [];
+  if (req.files) {
+    for (const [fieldName, files] of Object.entries(req.files)) {
+      for (const file of files) {
+        try {
+          const uploadedFile = await uploadToSupabase(file, 'patients', 'patient');
+          uploadedFiles.push({
+            ...uploadedFile,
+            fieldName
+          });
+        } catch (error) {
+          logger.error(`Erreur upload fichier ${fieldName}:`, error);
+          return res.status(500).json({
+            success: false,
+            message: `Erreur lors de l'upload du fichier ${fieldName}: ${error.message}`
+          });
+        }
+      }
+    }
+  }
 
   patient.firstName = firstName || patient.firstName;
   patient.lastName = lastName || patient.lastName;
@@ -147,8 +191,8 @@ const updatePatient = asyncHandler(async (req, res) => {
   patient.entryDate = entryDate || patient.entryDate;
   patient.exitDate = exitDate || patient.exitDate;
 
-  if (newFiles.length > 0) {
-    patient.files = patient.files.concat(newFiles);
+  if (uploadedFiles.length > 0) {
+    patient.files = patient.files.concat(uploadedFiles);
   }
 
   const updatedPatient = await patient.save();
@@ -170,12 +214,14 @@ const deletePatient = asyncHandler(async (req, res) => {
     throw new Error('Patient non trouvé');
   }
 
-  // Delete associated files
+  // Delete associated files from Supabase
   if (patient.files && patient.files.length > 0) {
     for (const file of patient.files) {
-      fs.unlink(path.join(__dirname, '../..', file), (err) => {
-        if (err) console.error(`Failed to delete file: ${file}`, err);
-      });
+      try {
+        await deleteFromSupabase(file.path);
+      } catch (err) {
+        logger.error(`Failed to delete Supabase file: ${file.path}`, err);
+      }
     }
   }
 
@@ -192,24 +238,49 @@ const getPatientStats = asyncHandler(async (req, res) => {
     {
       $group: {
         _id: null,
+
         total: { $sum: 1 },
-        present: {
-          $sum: { $cond: [{ $eq: ['$status', 'present'] }, 1, 0] }
-        },
-        absent: {
-          $sum: { $cond: [{ $eq: ['$status', 'absent'] }, 1, 0] }
-        },
+
         withEquipment: {
-          $sum: { $cond: [{ $ne: ['$equipment', null] }, 1, 0] }
+          $sum: {
+            $cond: [
+              { $gt: [{ $size: { $ifNull: ['$borrowedEquipment', []] } }, 0] },
+              1,
+              0
+            ]
+          }
         },
+
         withGuardians: {
-          $sum: { $cond: [{ $and: ['$guardianFirstName', '$guardianLastName'] }, 1, 0] }
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $ne: ['$guardianFirstName', null] },
+                  { $ne: ['$guardianFirstName', ''] },
+                  { $ne: ['$guardianLastName', null] },
+                  { $ne: ['$guardianLastName', ''] }
+                ]
+              },
+              1,
+              0
+            ]
+          }
         },
-        whiteNotebooks: {
-          $sum: { $cond: [{ $eq: ['$notebookType', 'blanc'] }, 1, 0] }
-        },
-        yellowNotebooks: {
-          $sum: { $cond: [{ $eq: ['$notebookType', 'jaune'] }, 1, 0] }
+
+        withSpecificEquipment: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $ne: ['$specificEquipment', null] },
+                  { $ne: ['$specificEquipment', ''] }
+                ]
+              },
+              1,
+              0
+            ]
+          }
         }
       }
     }
@@ -219,12 +290,9 @@ const getPatientStats = asyncHandler(async (req, res) => {
     success: true,
     data: stats[0] || {
       total: 0,
-      present: 0,
-      absent: 0,
       withEquipment: 0,
       withGuardians: 0,
-      whiteNotebooks: 0,
-      yellowNotebooks: 0
+      withSpecificEquipment: 0
     }
   });
 });

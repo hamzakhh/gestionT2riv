@@ -7,9 +7,6 @@ import {
   createEquipment,
   updateEquipment,
   deleteEquipment,
-  lendEquipment,
-  returnEquipmentItem,
-  addMaintenance,
   getEquipmentStats,
   getEquipmentHistory
 } from '../controllers/equipmentController.js';
@@ -19,14 +16,9 @@ router.use(protect);
 
 // Route pour les équipements disponibles (doit être avant /:id)
 router.get('/available', (req, res, next) => {
-  console.log('Received request to /available');
-  console.log('Original URL:', req.originalUrl);
-  console.log('Query params before:', req.query);
-  
   // Ajouter le filtre de statut disponible
   req.query.status = 'available';
-  console.log('Query params after:', req.query);
-  
+
   // Appeler la méthode getAllEquipment avec le statut disponible
   return getAllEquipment(req, res, next);
 });
@@ -34,13 +26,14 @@ router.get('/available', (req, res, next) => {
 // Route pour les statistiques
 router.get('/stats', getEquipmentStats);
 
+// Route pour obtenir un équipement par Asset ID (doit être avant /:id)
+router.get('/asset/:assetId', getEquipmentById);
+
 // Route pour la liste des équipements (avec filtrage optionnel via query params)
 router.get('/', getAllEquipment);
 
 // Route pour l'historique d'un équipement (doit être avant /:id)
 router.get('/:id/history', (req, res, next) => {
-  console.log('Route history appelée avec ID:', req.params.id);
-  console.log('URL complète:', req.originalUrl);
   return getEquipmentHistory(req, res, next);
 });
 
@@ -48,13 +41,8 @@ router.get('/:id/history', (req, res, next) => {
 router.get('/:id', getEquipmentById);
 
 // Routes nécessitant des permissions
-router.post('/', authorize(ROLES.ADMIN, ROLES.MANAGER), createEquipment);
-router.put('/:id', authorize(ROLES.ADMIN, ROLES.MANAGER), updateEquipment);
+router.post('/', authorize(ROLES.ADMIN), createEquipment);
+router.put('/:id', authorize(ROLES.ADMIN), updateEquipment);
 router.delete('/:id', authorize(ROLES.ADMIN), deleteEquipment);
-
-// Routes de prêt/retour (accessibles à tous)
-router.post('/:id/lend', lendEquipment);
-router.post('/:id/return', returnEquipmentItem);
-router.post('/:id/maintenance', addMaintenance);
 
 export default router;

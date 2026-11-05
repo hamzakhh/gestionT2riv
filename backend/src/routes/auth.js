@@ -33,43 +33,6 @@ const loginValidation = [
 router.post('/register', registerValidation, register);
 router.post('/login', loginValidation, login);
 
-// Route de test pour vérifier que le backend répond
-router.get('/test', (req, res) => {
-  console.log('🧪 Test endpoint appelé à', new Date().toISOString());
-  console.log('📧 Headers:', req.headers);
-  console.log('🔑 JWT_SECRET exists:', !!process.env.JWT_SECRET);
-  
-  const testData = {
-    success: true,
-    message: 'Backend fonctionne correctement',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    jwtSecretExists: !!process.env.JWT_SECRET,
-    mongoUriExists: !!process.env.MONGODB_URI
-  };
-  
-  console.log('📤 Test response:', JSON.stringify(testData, null, 2));
-  
-  res.json(testData);
-});
-
-// Route de test POST pour simuler un login
-router.post('/test-login', (req, res) => {
-  console.log('🧪 Test login endpoint appelé');
-  console.log('📧 Request body:', req.body);
-  
-  const testData = {
-    success: true,
-    message: 'Test login endpoint fonctionne',
-    timestamp: new Date().toISOString(),
-    receivedData: req.body
-  };
-  
-  console.log('📤 Test login response:', JSON.stringify(testData, null, 2));
-  
-  res.json(testData);
-});
-
 // Routes protégées
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);

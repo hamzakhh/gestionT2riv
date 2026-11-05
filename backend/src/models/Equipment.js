@@ -1,7 +1,13 @@
 import mongoose from 'mongoose';
 import { EQUIPMENT_STATUS, EQUIPMENT_CONDITION } from '../config/constants.js';
+import AssetCounter from './AssetCounter.js';
 
 const equipmentSchema = new mongoose.Schema({
+  assetId: {
+    type: String,
+    required: [true, 'L\'Asset ID est requis'],
+    trim: true,
+  },
   name: {
     type: String,
     required: [true, 'Le nom de l\'équipement est requis'],
@@ -20,8 +26,7 @@ const equipmentSchema = new mongoose.Schema({
   },
   serialNumber: {
     type: String,
-    required: [true, 'Le numéro de série est requis'],
-    unique: true,
+    required: false,
     trim: true,
   },
   status: {
@@ -45,39 +50,6 @@ const equipmentSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
-  currentBorrower: {
-    name: String,
-    phone: String,
-    address: String,
-    idCard: String,
-    lentDate: Date,
-  },
-  loanHistory: [{
-    borrower: {
-      name: String,
-      phone: String,
-      address: String,
-      idCard: String,
-    },
-    lentDate: {
-      type: Date,
-      required: true,
-    },
-    returnDate: Date,
-    condition: {
-      type: String,
-      enum: Object.values(EQUIPMENT_CONDITION),
-    },
-    notes: String,
-    lentBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    returnedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-  }],
   maintenanceHistory: [{
     date: {
       type: Date,
@@ -114,36 +86,48 @@ const equipmentSchema = new mongoose.Schema({
 // Index pour la recherche
 equipmentSchema.index({ name: 'text', category: 'text', serialNumber: 'text' });
 
-// Méthode pour prêter l'équipement
-equipmentSchema.methods.lend = function(borrowerInfo, userId) {
-  this.status = EQUIPMENT_STATUS.BORROWED;
-  this.currentBorrower = {
-    ...borrowerInfo,
-    lentDate: new Date(),
-  };
-  
-  this.loanHistory.push({
-    borrower: borrowerInfo,
-    lentDate: new Date(),
-    condition: this.condition,
-    lentBy: userId,
-  });
-};
+// Index unique pour assetId (plus sparse car le champ est required)
+equipmentSchema.index({ assetId: 1 }, { unique: true });
 
-// Méthode pour retourner l'équipement
-equipmentSchema.methods.return = function(condition, notes, userId) {
-  this.status = EQUIPMENT_STATUS.AVAILABLE;
-  this.condition = condition;
-  
-  const lastLoan = this.loanHistory[this.loanHistory.length - 1];
-  if (lastLoan) {
-    lastLoan.returnDate = new Date();
-    lastLoan.condition = condition;
-    lastLoan.notes = notes;
-    lastLoan.returnedBy = userId;
+// Index sparse pour serialNumber (permet plusieurs null et unicité si fourni)
+equipmentSchema.index({ serialNumber: 1 }, { unique: true, sparse: true });
+
+// Index composé pour recherche combinée
+equipmentSchema.index({ assetId: 1, serialNumber: 1 });
+
+// Pre-save hook pour empêcher la modification d'assetId après création
+equipmentSchema.pre('save', function(next) {
+  if (this.isModified('assetId') && !this.isNew) {
+    return next(new Error('L\'Asset ID ne peut pas être modifié après création'));
   }
-  
-  this.currentBorrower = undefined;
+  next();
+});
+
+// Méthode statique pour générer le prochain Asset ID de manière atomique
+equipmentSchema.statics.generateNextAssetId = async function(category) {
+  try {
+    // Déterminer le préfixe et la clé du compteur selon la catégorie
+    const prefix = category === 'Bureautique' ? 'BUR' : 'MAT';
+    const key = category === 'Bureautique' ? 'bureautique' : 'medical';
+    
+    // Utiliser findOneAndUpdate avec $inc pour une incrémentation atomique séquentielle
+    const counter = await AssetCounter.findOneAndUpdate(
+      { key },
+      { $inc: { sequence: 1 } },
+      {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true
+      }
+    );
+
+    // Formater l'Asset ID avec padding à 6 chiffres
+    const assetId = `${prefix}-${String(counter.sequence).padStart(6, '0')}`;
+    
+    return assetId;
+  } catch (error) {
+    throw new Error(`Erreur lors de la génération de l'Asset ID: ${error.message}`);
+  }
 };
 
 export default mongoose.model('Equipment', equipmentSchema);

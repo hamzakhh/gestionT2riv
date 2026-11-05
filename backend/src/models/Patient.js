@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
-import { LOAN_STATUS } from '../config/constants.js';
 
 const patientSchema = new mongoose.Schema({
   firstName: {
@@ -21,7 +20,13 @@ const patientSchema = new mongoose.Schema({
   phone: {
     type: String,
     required: [true, 'Le numéro de téléphone est requis'],
-    trim: true
+    trim: true,
+    validate: {
+      validator: function(value) {
+        return /^\d{1,8}$/.test(value);
+      },
+      message: 'Le numéro de téléphone doit contenir uniquement des chiffres (maximum 8)'
+    }
   },
   guardianFirstName: {
     type: String,
@@ -43,6 +48,9 @@ const patientSchema = new mongoose.Schema({
     enum: ['', 'Chaise roulante normale', 'Chaise roulante électrique', 'Lève malade', 'Chaise de douche', 'Chaise dispositif de toilette', 'Rehausseur de toilette', 'Trépied', 'Rampe à marche', 'Cannes canadiennes', 'Canne personne âgée', 'Déambulateur', 'Coussin orthopédique', 'lit', 'matelas', 'concentrateur d\'oxygène'],
     default: ''
   },
+  dateOfBirth: {
+    type: Date
+  },
   entryDate: {
     type: Date
   },
@@ -54,12 +62,6 @@ const patientSchema = new mongoose.Schema({
   borrowedEquipment: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Equipment'
-  }],
-  
-  // Historique des prêts
-  loanHistory: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Loan'
   }],
   
   // Statut des prêts actifs
@@ -76,7 +78,12 @@ const patientSchema = new mongoose.Schema({
   },
   files: [
     {
-      type: String
+      path: String,          // Chemin Supabase (ex: patients/patient-xxx.jpg)
+      fileName: String,      // Nom stocké
+      originalName: String,  // Nom original
+      mimeType: String,      // Type MIME
+      size: Number,         // Taille en octets
+      uploadedAt: Date      // Date d'upload
     }
   ]
 }, {
@@ -115,7 +122,6 @@ patientSchema.plugin(mongoosePaginate);
 patientSchema.pre('save', function(next) {
   // Corriger activeLoans négatif avant toute validation
   if (this.activeLoans < 0) {
-    console.log(`Correction automatique: activeLoans était ${this.activeLoans}, mise à 0`);
     this.activeLoans = 0;
   }
   
@@ -124,7 +130,6 @@ patientSchema.pre('save', function(next) {
     const equipmentCount = Array.isArray(this.borrowedEquipment) ? this.borrowedEquipment.length : 0;
     // S'assurer que activeLoans n'est jamais négatif
     this.activeLoans = Math.max(0, equipmentCount);
-    console.log(`Patient ${this._id}: activeLoans mis à jour à ${this.activeLoans} (borrowedEquipment: ${equipmentCount})`);
   }
   next();
 });
@@ -132,7 +137,6 @@ patientSchema.pre('save', function(next) {
 // Middleware de validation pour corriger les valeurs négatives
 patientSchema.pre('validate', function(next) {
   if (this.activeLoans < 0) {
-    console.log(`Correction dans pre-validate: activeLoans était ${this.activeLoans}, mise à 0`);
     this.activeLoans = 0;
   }
   next();
@@ -152,14 +156,6 @@ patientSchema.methods.removeBorrowedEquipment = async function(equipmentId) {
     eqId => !eqId.equals(equipmentId)
   );
   await this.save();
-};
-
-// Méthode pour ajouter un prêt à l'historique
-patientSchema.methods.addLoanToHistory = async function(loanId) {
-  if (!this.loanHistory.includes(loanId)) {
-    this.loanHistory.push(loanId);
-    await this.save();
-  }
 };
 
 const Patient = mongoose.model('Patient', patientSchema);

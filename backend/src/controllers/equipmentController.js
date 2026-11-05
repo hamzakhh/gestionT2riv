@@ -1,7 +1,9 @@
 import mongoose from 'mongoose';
 import Equipment from '../models/Equipment.js';
+import AssetCounter from '../models/AssetCounter.js';
+import Loan from '../models/Loan.js';
+import User from '../models/User.js';
 import { formatPaginatedResponse, getPaginationParams } from '../utils/helpers.js';
-import { EQUIPMENT_STATUS } from '../config/constants.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -11,7 +13,7 @@ import logger from '../utils/logger.js';
  */
 export const getAllEquipment = async (req, res, next) => {
   try {
-    const { page, limit, status, category, search } = req.query;
+    const { page, limit, status, category, search, lean = true, minimal = false } = req.query;
     const { skip, itemsPerPage } = getPaginationParams(page, limit);
 
     // Construire le filtre
@@ -20,6 +22,7 @@ export const getAllEquipment = async (req, res, next) => {
     if (category) filter.category = category;
     if (search) {
       filter.$or = [
+        { assetId: { $regex: search, $options: 'i' } },
         { name: { $regex: search, $options: 'i' } },
         { type: { $regex: search, $options: 'i' } },
         { serialNumber: { $regex: search, $options: 'i' } },
@@ -27,13 +30,38 @@ export const getAllEquipment = async (req, res, next) => {
       ];
     }
 
-    // Récupérer les équipements
-    const equipment = await Equipment.find(filter)
+    // Projection optimisée pour les réponses rapides (champs uniquement nécessaires pour l'affichage)
+    const projection = minimal === 'true' ? {
+      _id: 1,
+      assetId: 1,
+      name: 1,
+      category: 1,
+      type: 1,
+      status: 1,
+      condition: 1,
+      serialNumber: 1,
+      assignedUserId: 1
+    } : {};
+
+    // Récupérer les équipements avec optimisations
+    let query = Equipment.find(filter, projection)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(itemsPerPage)
-      .populate('createdBy', 'firstName lastName')
-      .populate('assignedUserId', 'firstName lastName role');
+      .limit(itemsPerPage);
+
+    // Utiliser lean pour les meilleures performances si demandé
+    if (lean === 'true') {
+      query = query.lean();
+    }
+
+    // Population conditionnelle
+    if (minimal !== 'true') {
+      query = query
+        .populate('createdBy', 'firstName lastName')
+        .populate('assignedUserId', 'firstName lastName role');
+    }
+
+    const equipment = await query;
 
     const total = await Equipment.countDocuments(filter);
 
@@ -47,17 +75,31 @@ export const getAllEquipment = async (req, res, next) => {
 };
 
 /**
- * @desc    Obtenir un équipement par ID
+ * @desc    Obtenir un équipement par ID ou Asset ID
  * @route   GET /api/equipment/:id
+ * @route   GET /api/equipment/asset/:assetId
  * @access  Private
  */
 export const getEquipmentById = async (req, res, next) => {
   try {
-    const equipment = await Equipment.findById(req.params.id)
-      .populate('createdBy', 'firstName lastName')
-      .populate('loanHistory.lentBy', 'firstName lastName')
-      .populate('loanHistory.returnedBy', 'firstName lastName')
-      .populate('maintenanceHistory.performedBy', 'firstName lastName');
+    const identifier = req.params.id || req.params.assetId;
+
+    // Essayer d'abord par _id (ObjectId), puis par assetId
+    let equipment;
+
+    // Vérifier si c'est un ObjectId valide
+    if (mongoose.Types.ObjectId.isValid(identifier)) {
+      equipment = await Equipment.findById(identifier)
+        .populate('createdBy', 'firstName lastName')
+        .populate('maintenanceHistory.performedBy', 'firstName lastName');
+    }
+
+    // Si pas trouvé par ObjectId, essayer par assetId
+    if (!equipment) {
+      equipment = await Equipment.findOne({ assetId: identifier })
+        .populate('createdBy', 'firstName lastName')
+        .populate('maintenanceHistory.performedBy', 'firstName lastName');
+    }
 
     if (!equipment) {
       return res.status(404).json({
@@ -84,9 +126,44 @@ export const createEquipment = async (req, res, next) => {
   try {
     req.body.createdBy = req.user._id;
 
+    // Sécurité : ignorer tout assetId envoyé par le frontend
+    delete req.body.assetId;
+
+    // Générer un nouvel Asset ID de manière atomique selon la catégorie
+    const category = req.body.category || 'Médical';
+    const assetId = await Equipment.generateNextAssetId(category);
+    req.body.assetId = assetId;
+
+    // Gérer serialNumber - générer automatiquement si vide ou non fourni
+    if (!req.body.serialNumber || req.body.serialNumber.trim() === '') {
+      req.body.serialNumber = generateSerialNumber(req.body.type);
+    } else {
+      req.body.serialNumber = req.body.serialNumber.trim();
+    }
+
+    // Valider assignedUserId si fourni
+    if (req.body.assignedUserId) {
+      if (!mongoose.Types.ObjectId.isValid(req.body.assignedUserId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID utilisateur invalide',
+          errors: ['assignedUserId doit être un ObjectId valide']
+        });
+      }
+
+      const userExists = await User.findById(req.body.assignedUserId);
+      if (!userExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'L\'utilisateur sélectionné n\'existe pas',
+          errors: ['assignedUserId: utilisateur non trouvé']
+        });
+      }
+    }
+
     const equipment = await Equipment.create(req.body);
 
-    logger.info(`Équipement créé: ${equipment.name} par ${req.user.email}`);
+    logger.info(`Équipement créé: ${equipment.assetId} - ${equipment.name} par ${req.user.email}`);
 
     res.status(201).json({
       success: true,
@@ -94,8 +171,39 @@ export const createEquipment = async (req, res, next) => {
       data: equipment,
     });
   } catch (error) {
+    // Gérer les erreurs de duplication (code 11000)
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      logger.error(`Erreur de duplication lors de la création d'équipement: champ ${field}`);
+      return res.status(400).json({
+        success: false,
+        message: `Le champ ${field} existe déjà`,
+        errors: [`${field} doit être unique`]
+      });
+    }
+
+    logger.error(`Erreur lors de la création d'équipement: ${error.message}`);
     next(error);
   }
+};
+
+// Fonction pour générer un numéro de série automatique
+// Format: 5 premiers caractères du type + tiret + nombre aléatoire (ex: CHAISE ROULANTE → CHAIR-12345)
+const generateSerialNumber = (type) => {
+  if (!type) {
+    return `SER-${Math.floor(Math.random() * 90000) + 10000}`;
+  }
+  
+  // Prendre les 5 premiers caractères du type, en majuscules, sans espaces
+  const prefix = type
+    .toUpperCase()
+    .replace(/\s/g, '')
+    .substring(0, 5);
+  
+  // Générer un nombre aléatoire entre 10000 et 99999
+  const randomNum = Math.floor(Math.random() * 90000) + 10000;
+  
+  return `${prefix}-${randomNum}`;
 };
 
 /**
@@ -105,15 +213,9 @@ export const createEquipment = async (req, res, next) => {
  */
 export const updateEquipment = async (req, res, next) => {
   try {
-    console.log('=== DÉBUT updateEquipment ===');
-    console.log('ID reçu:', req.params.id);
-    console.log('Body brut:', req.body);
-    console.log('Utilisateur:', req.user);
-    
     const equipment = await Equipment.findById(req.params.id);
 
     if (!equipment) {
-      console.log('Équipement non trouvé');
       return res.status(404).json({
         success: false,
         message: 'Équipement non trouvé',
@@ -121,9 +223,8 @@ export const updateEquipment = async (req, res, next) => {
     }
 
     // Ne pas permettre la modification de certains champs via cette route
-    delete req.body.loanHistory;
     delete req.body.maintenanceHistory;
-    delete req.body.currentBorrower;
+    delete req.body.assetId; // Empêcher la modification de l'Asset ID
 
     // Nettoyer les données
     const cleanBody = { ...req.body };
@@ -131,6 +232,26 @@ export const updateEquipment = async (req, res, next) => {
     // Gérer assignedUserId vide
     if (cleanBody.assignedUserId === '' || cleanBody.assignedUserId === null || cleanBody.assignedUserId === undefined) {
       cleanBody.assignedUserId = null;
+    }
+
+    // Valider assignedUserId si fourni
+    if (cleanBody.assignedUserId) {
+      if (!mongoose.Types.ObjectId.isValid(cleanBody.assignedUserId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID utilisateur invalide',
+          errors: ['assignedUserId doit être un ObjectId valide']
+        });
+      }
+
+      const userExists = await User.findById(cleanBody.assignedUserId);
+      if (!userExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'L\'utilisateur sélectionné n\'existe pas',
+          errors: ['assignedUserId: utilisateur non trouvé']
+        });
+      }
     }
     
     // Gérer les valeurs de condition invalides - mapper les anciennes valeurs vers les nouvelles
@@ -141,22 +262,28 @@ export const updateEquipment = async (req, res, next) => {
       'Très bon état': 'excellent',
       'État moyen': 'fair',
       'Neuf': 'new',
-      'Nouveau': 'new'
+      'Nouveau': 'new',
+      'Endommagé': 'poor', // Ancienne valeur DAMAGED → poor
+      'Inutilisable': 'unusable'
     };
-    
+
     if (cleanBody.condition && conditionMapping[cleanBody.condition]) {
-      console.log('Mapping condition:', cleanBody.condition, '->', conditionMapping[cleanBody.condition]);
       cleanBody.condition = conditionMapping[cleanBody.condition];
     }
 
-    console.log('Body après nettoyage:', cleanBody);
+    // Gérer serialNumber optionnel
+    if (cleanBody.serialNumber !== undefined && cleanBody.serialNumber !== null) {
+      cleanBody.serialNumber = cleanBody.serialNumber.trim();
+      if (cleanBody.serialNumber === '') {
+        cleanBody.serialNumber = null;
+      }
+    }
 
-    // Validation manuelle des champs requis
-    const requiredFields = ['name', 'category', 'type', 'serialNumber'];
+    // Validation manuelle des champs requis (serialNumber retiré)
+    const requiredFields = ['name', 'category', 'type'];
     const missingFields = requiredFields.filter(field => !cleanBody[field]);
     
     if (missingFields.length > 0) {
-      console.error('Champs requis manquants:', missingFields);
       return res.status(400).json({
         success: false,
         message: 'Champs requis manquants',
@@ -167,7 +294,6 @@ export const updateEquipment = async (req, res, next) => {
     // Validation des enums
     const validCategories = ['Médical', 'Bureautique'];
     if (cleanBody.category && !validCategories.includes(cleanBody.category)) {
-      console.error('Catégorie invalide:', cleanBody.category);
       return res.status(400).json({
         success: false,
         message: 'Catégorie invalide',
@@ -180,7 +306,6 @@ export const updateEquipment = async (req, res, next) => {
     // Validation avant sauvegarde
     const validationError = equipment.validateSync();
     if (validationError) {
-      console.error('Erreur de validation Mongoose:', validationError);
       return res.status(400).json({
         success: false,
         message: 'Erreur de validation',
@@ -198,8 +323,6 @@ export const updateEquipment = async (req, res, next) => {
       data: equipment,
     });
   } catch (error) {
-    console.error('Erreur dans updateEquipment:', error);
-    
     // Gérer les erreurs de duplication
     if (error.code === 11000) {
       const field = Object.keys(error.keyValue)[0];
@@ -221,185 +344,59 @@ export const updateEquipment = async (req, res, next) => {
  */
 export const deleteEquipment = async (req, res, next) => {
   try {
-    console.log('=== DÉBUT deleteEquipment ===');
-    console.log('Headers de la requête:', req.headers);
-    console.log('Utilisateur effectuant la suppression:', req.user);
-    console.log('ID reçu:', req.params.id);
-    
     // Vérifier si l'ID est valide
     if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
-      console.error('ID invalide:', req.params.id);
       return res.status(400).json({
         success: false,
         message: 'ID invalide',
       });
     }
-    
+
     const equipment = await Equipment.findById(req.params.id);
-    console.log('Équipement trouvé:', equipment ? 'Oui' : 'Non');
 
     if (!equipment) {
-      console.log('Équipement non trouvé avec l\'ID:', req.params.id);
       return res.status(404).json({
         success: false,
         message: 'Équipement non trouvé',
       });
     }
 
-    // Vérifier si l'équipement est prêté
-    console.log('Statut de l\'équipement:', equipment.status);
-    console.log('Valeur de EQUIPMENT_STATUS.BORROWED:', EQUIPMENT_STATUS.BORROWED);
-    
-    if (equipment.status === EQUIPMENT_STATUS.BORROWED) {
-      console.log('Tentative de suppression d\'un équipement prêté');
+    // Vérifier si l'équipement est associé à un prêt actif
+    const activeLoan = await Loan.findOne({
+      equipment: equipment._id,
+      status: 'active'
+    });
+
+    if (activeLoan) {
       return res.status(400).json({
         success: false,
-        message: 'Impossible de supprimer un équipement prêté',
+        message: 'Impossible de supprimer cet équipement car il est actuellement associé à un prêt actif.',
       });
     }
 
     try {
-      console.log('Tentative de suppression...');
       await equipment.deleteOne();
-      console.log('Équipement supprimé avec succès');
 
       logger.info(`Équipement supprimé: ${equipment.name} par ${req.user.email}`);
+
+      // Reset sécurisé du compteur si plus aucun équipement de cette catégorie
+      const key = equipment.category === 'Bureautique' ? 'bureautique' : 'medical';
+      const count = await Equipment.countDocuments({ category: equipment.category });
+
+      if (count === 0) {
+        await AssetCounter.findOneAndUpdate(
+          { key },
+          { $set: { sequence: 0 } }
+        );
+      }
 
       return res.status(200).json({
         success: true,
         message: 'Équipement supprimé',
       });
     } catch (deleteError) {
-      console.error('Erreur lors de la suppression dans la base de données:', deleteError);
       throw deleteError; // Laisser le gestionnaire d'erreurs global gérer cela
     }
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * @desc    Prêter un équipement
- * @route   POST /api/equipment/:id/lend
- * @access  Private
- */
-export const lendEquipment = async (req, res, next) => {
-  try {
-    const equipment = await Equipment.findById(req.params.id);
-
-    if (!equipment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Équipement non trouvé',
-      });
-    }
-
-    if (equipment.status === EQUIPMENT_STATUS.BORROWED) {
-      return res.status(400).json({
-        success: false,
-        message: 'Équipement déjà prêté',
-      });
-    }
-
-    if (equipment.status !== EQUIPMENT_STATUS.AVAILABLE) {
-      return res.status(400).json({
-        success: false,
-        message: 'Équipement non disponible pour le prêt',
-      });
-    }
-
-    const { name, phone, address, idCard } = req.body;
-
-    equipment.lend({ name, phone, address, idCard }, req.user._id);
-    await equipment.save();
-
-    logger.info(`Équipement prêté: ${equipment.name} à ${name} par ${req.user.email}`);
-
-    res.status(200).json({
-      success: true,
-      message: 'Équipement prêté avec succès',
-      data: equipment,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * @desc    Retourner un équipement
- * @route   POST /api/equipment/:id/return
- * @access  Private
- */
-export const returnEquipmentItem = async (req, res, next) => {
-  try {
-    const equipment = await Equipment.findById(req.params.id);
-
-    if (!equipment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Équipement non trouvé',
-      });
-    }
-
-    if (equipment.status !== EQUIPMENT_STATUS.BORROWED) {
-      return res.status(400).json({
-        success: false,
-        message: 'Équipement non prêté',
-      });
-    }
-
-    const { condition, notes } = req.body;
-
-    equipment.return(condition, notes, req.user._id);
-    await equipment.save();
-
-    logger.info(`Équipement retourné: ${equipment.name} par ${req.user.email}`);
-
-    res.status(200).json({
-      success: true,
-      message: 'Équipement retourné avec succès',
-      data: equipment,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * @desc    Ajouter une maintenance
- * @route   POST /api/equipment/:id/maintenance
- * @access  Private
- */
-export const addMaintenance = async (req, res, next) => {
-  try {
-    const equipment = await Equipment.findById(req.params.id);
-
-    if (!equipment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Équipement non trouvé',
-      });
-    }
-
-    const { date, description, cost } = req.body;
-
-    equipment.maintenanceHistory.push({
-      date,
-      description,
-      cost,
-      performedBy: req.user._id,
-    });
-
-    equipment.status = EQUIPMENT_STATUS.MAINTENANCE;
-    await equipment.save();
-
-    logger.info(`Maintenance ajoutée: ${equipment.name} par ${req.user.email}`);
-
-    res.status(200).json({
-      success: true,
-      message: 'Maintenance enregistrée',
-      data: equipment,
-    });
   } catch (error) {
     next(error);
   }
@@ -452,21 +449,12 @@ export const getEquipmentStats = async (req, res, next) => {
  */
 export const getEquipmentHistory = async (req, res, next) => {
   try {
-    console.log('=== DÉBUT getEquipmentHistory ===');
-    console.log('ID reçu:', req.params.id);
-    console.log('URL originale:', req.originalUrl);
-    
     const equipment = await Equipment.findById(req.params.id)
       .populate('createdBy', 'firstName lastName email')
-      .populate('loanHistory.lentBy', 'firstName lastName email')
-      .populate('loanHistory.returnedBy', 'firstName lastName email')
       .populate('maintenanceHistory.performedBy', 'firstName lastName email')
       .populate('assignedUserId', 'firstName lastName email role');
 
-    console.log('Équipement trouvé:', equipment ? 'Oui' : 'Non');
-
     if (!equipment) {
-      console.log('Équipement non trouvé avec l\'ID:', req.params.id);
       return res.status(404).json({
         success: false,
         message: 'Équipement non trouvé',
@@ -477,6 +465,7 @@ export const getEquipmentHistory = async (req, res, next) => {
     const history = {
       equipment: {
         _id: equipment._id,
+        assetId: equipment.assetId,
         name: equipment.name,
         category: equipment.category,
         type: equipment.type,
@@ -490,36 +479,14 @@ export const getEquipmentHistory = async (req, res, next) => {
         assignedUserId: equipment.assignedUserId,
         notes: equipment.notes
       },
-      loanHistory: equipment.loanHistory.map(loan => ({
-        borrower: loan.borrower,
-        lentDate: loan.lentDate,
-        returnDate: loan.returnDate,
-        condition: loan.condition,
-        notes: loan.notes,
-        lentBy: loan.lentBy,
-        returnedBy: loan.returnedBy,
-        duration: loan.returnDate ? 
-          Math.ceil((loan.returnDate - loan.lentDate) / (1000 * 60 * 60 * 24)) : 
-          Math.ceil((new Date() - loan.lentDate) / (1000 * 60 * 60 * 24))
-      })),
       maintenanceHistory: equipment.maintenanceHistory.map(maintenance => ({
         date: maintenance.date,
         description: maintenance.description,
         cost: maintenance.cost,
         performedBy: maintenance.performedBy
       })),
-      currentBorrower: equipment.currentBorrower,
       statistics: {
-        totalLoans: equipment.loanHistory.length,
-        activeLoans: equipment.loanHistory.filter(loan => !loan.returnDate).length,
-        totalMaintenance: equipment.maintenanceHistory.length,
-        averageLoanDuration: equipment.loanHistory.length > 0 ? 
-          Math.round(
-            equipment.loanHistory
-              .filter(loan => loan.returnDate)
-              .reduce((sum, loan) => sum + Math.ceil((loan.returnDate - loan.lentDate) / (1000 * 60 * 60 * 24)), 0) / 
-            equipment.loanHistory.filter(loan => loan.returnDate).length
-          ) : 0
+        totalMaintenance: equipment.maintenanceHistory.length
       }
     };
 

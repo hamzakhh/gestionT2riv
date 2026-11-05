@@ -1,9 +1,9 @@
-const http = require('http');
+import http from 'http';
 
 const options = {
   host: 'localhost',
   port: process.env.PORT || 5000,
-  path: '/api/v1/health',
+  path: '/health',
   timeout: 2000
 };
 

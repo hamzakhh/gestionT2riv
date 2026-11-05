@@ -36,13 +36,8 @@ const userSchema = new mongoose.Schema({
       'patients',
       'equipment',
       'loans',
-      'orphans',
-      'donors',
-      'volunteers',
       'users',
       'role-management',
-      'zakat',
-      'don-ramadhan',
       'ramadhan'
     ]
   }],
@@ -67,6 +62,9 @@ const userSchema = new mongoose.Schema({
   lastLogin: {
     type: Date,
   },
+  passwordChangedAt: {
+    type: Date,
+  },
 }, {
   timestamps: true,
 });
@@ -79,6 +77,10 @@ userSchema.pre('save', async function(next) {
   
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+  
+  // Mettre à jour passwordChangedAt quand le mot de passe change
+  this.passwordChangedAt = Date.now();
+  
   next();
 });
 

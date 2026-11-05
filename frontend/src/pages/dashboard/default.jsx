@@ -19,9 +19,7 @@ import { UserAddOutlined, UserOutlined, ToolOutlined, DollarOutlined, TeamOutlin
 import MonthlyBarChart from 'sections/dashboard/default/MonthlyBarChart';
 import StatsDonutChart from 'sections/dashboard/default/StatsDonutChart';
  
-import orphanService from 'services/orphanService';
 import equipmentService from 'services/equipmentService';
-import donorService from 'services/donorService';
 
 // assets
 
@@ -32,9 +30,7 @@ import donorService from 'services/donorService';
 export default function DashboardDefault() {
   const { user } = useAuth();
   const [stats, setStats] = useState({
-    orphans: {},
-    equipment: {},
-    donors: {}
+    equipment: {}
   });
   const [loading, setLoading] = useState(false);
  
@@ -43,15 +39,9 @@ export default function DashboardDefault() {
     const loadStats = async () => {
       try {
         setLoading(true);
-        const [orph, equip, donors] = await Promise.all([
-          orphanService.getStats().catch(() => ({})),
-          equipmentService.getStats().catch(() => ({})),
-          donorService.getStats().catch(() => ({}))
-        ]);
+        const equip = await equipmentService.getStats().catch(() => ({}));
         setStats({ 
-          orphans: orph?.data ?? orph, 
-          equipment: equip?.data ?? equip,
-          donors: donors?.data ?? donors
+          equipment: equip?.data ?? equip
         });
       } catch (e) {
         // ignore for dashboard; could add toast
@@ -106,70 +96,6 @@ export default function DashboardDefault() {
         
         {/* Ligne des statistiques */}
       <Grid container spacing={2} sx={{ mt: 2, width: '100%', maxWidth: '100%', justifyContent: 'center', flexWrap: 'nowrap' }}>
-        {/* Carte Orphelins */}
-        <Grid item xs={12} sm={6} lg={3} sx={{ flex: '0 1 280px', maxWidth: '100%' }}>
-          <Box sx={{
-            p: 3,
-            borderRadius: 3,
-            background: 'linear-gradient(195deg, #FF6B6B 0%, #FF4D4D 100%)',
-            color: 'white',
-            boxShadow: '0 6px 20px 0 rgba(0, 0, 0, 0.15), 0 8px 10px -5px rgba(255, 107, 107, 0.3)',
-            position: 'relative',
-            overflow: 'hidden',
-            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: '0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 12px 15px -5px rgba(255, 107, 107, 0.4)',
-            }
-          }}>
-            <Typography variant="h6" sx={{ opacity: 0.8, mb: 1, position: 'relative', zIndex: 1 }}>Orphelins</Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
-              <Typography variant="h3" sx={{ fontWeight: 'bold' }}>{stats.orphans?.total || 0}</Typography>
-              <TeamOutlined sx={{ fontSize: '2.5rem', color: 'rgba(255,255,255,0.8)' }} />
-            </Box>
-            <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', opacity: 0.8, position: 'relative', zIndex: 1 }}>
-              <Box sx={{ width: '100%', mr: 1 }}>
-                <Box sx={{ height: 4, background: 'rgba(255,255,255,0.3)', borderRadius: 2, overflow: 'hidden' }}>
-                  <Box sx={{ width: '70%', height: '100%', background: 'white' }} />
-                </Box>
-              </Box>
-              <Typography variant="body2">70%</Typography>
-            </Box>
-          </Box>
-        </Grid>
-
-        {/* Carte Donateurs */}
-        <Grid item xs={12} sm={6} lg={3} sx={{ flex: '0 1 280px', maxWidth: '100%' }}>
-          <Box sx={{
-            p: 3,
-            borderRadius: 3,
-            background: 'linear-gradient(195deg, #00BCD4 0%, #0097A7 100%)',
-            color: 'white',
-            boxShadow: '0 6px 20px 0 rgba(0, 0, 0, 0.15), 0 8px 10px -5px rgba(0, 188, 212, 0.3)',
-            position: 'relative',
-            overflow: 'hidden',
-            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: '0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 12px 15px -5px rgba(0, 188, 212, 0.4)',
-            }
-          }}>
-            <Typography variant="h6" sx={{ opacity: 0.8, mb: 1, position: 'relative', zIndex: 1 }}>Donateurs</Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
-              <Typography variant="h3" sx={{ fontWeight: 'bold' }}>{stats.donors?.total || 0}</Typography>
-              <UserOutlined sx={{ fontSize: '2.5rem', color: 'rgba(255,255,255,0.8)' }} />
-            </Box>
-            <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', opacity: 0.8, position: 'relative', zIndex: 1 }}>
-              <Box sx={{ width: '100%', mr: 1 }}>
-                <Box sx={{ height: 4, background: 'rgba(255,255,255,0.3)', borderRadius: 2, overflow: 'hidden' }}>
-                  <Box sx={{ width: '50%', height: '100%', background: 'white' }} />
-                </Box>
-              </Box>
-              <Typography variant="body2">50%</Typography>
-            </Box>
-          </Box>
-        </Grid>
-
         {/* Carte Équipements */}
         <Grid item xs={12} sm={6} lg={3} sx={{ flex: '0 1 280px', maxWidth: '100%' }}>
           <Box sx={{
@@ -198,38 +124,6 @@ export default function DashboardDefault() {
                 </Box>
               </Box>
               <Typography variant="body2">90%</Typography>
-            </Box>
-          </Box>
-        </Grid>
-
-        {/* Carte Dons */}
-        <Grid item xs={12} sm={6} lg={3} sx={{ flex: '0 1 280px', maxWidth: '100%' }}>
-          <Box sx={{
-            p: 3,
-            borderRadius: 3,
-            background: 'linear-gradient(195deg, #FFC107 0%, #FFA000 100%)',
-            color: 'white',
-            boxShadow: '0 6px 20px 0 rgba(0, 0, 0, 0.15), 0 8px 10px -5px rgba(255, 193, 7, 0.3)',
-            position: 'relative',
-            overflow: 'hidden',
-            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: '0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 12px 15px -5px rgba(255, 193, 7, 0.4)',
-            }
-          }}>
-            <Typography variant="h6" sx={{ opacity: 0.8, mb: 1, position: 'relative', zIndex: 1 }}>Dons Zakat</Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
-              <Typography variant="h3" sx={{ fontWeight: 'bold' }}>{stats.zakat?.total || 25}</Typography>
-              <DollarOutlined sx={{ fontSize: '2.5rem', color: 'rgba(255,255,255,0.8)' }} />
-            </Box>
-            <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', opacity: 0.8, position: 'relative', zIndex: 1 }}>
-              <Box sx={{ width: '100%', mr: 1 }}>
-                <Box sx={{ height: 4, background: 'rgba(255,255,255,0.3)', borderRadius: 2, overflow: 'hidden' }}>
-                  <Box sx={{ width: '85%', height: '100%', background: 'white' }} />
-                </Box>
-              </Box>
-              <Typography variant="body2">85%</Typography>
             </Box>
           </Box>
         </Grid>
@@ -275,24 +169,9 @@ export default function DashboardDefault() {
                   {
                     data: [
                       { 
-                        value: stats.orphans?.total || 0, 
-                        label: 'Orphelins',
-                        color: '#FF6B6B'
-                      },
-                      { 
                         value: stats.equipment?.total || 0, 
                         label: 'Équipements',
                         color: '#9C27B0'
-                      },
-                      { 
-                        value: stats.donors?.total || 0, 
-                        label: 'Donateurs',
-                        color: '#00BCD4'
-                      },
-                      { 
-                        value: stats.zakat?.total || 25, 
-                        label: 'Dons Zakat',
-                        color: '#FFC107'
                       }
                     ],
                     innerRadius: 60,
@@ -347,10 +226,7 @@ export default function DashboardDefault() {
               width: { xs: '100%', md: '40%' }
             }}>
               {[
-                { label: 'Orphelins', value: stats.orphans?.total || 0, color: '#FF6B6B', icon: '👨‍👧‍👦' },
-                { label: 'Équipements', value: stats.equipment?.total || 0, color: '#9C27B0', icon: '🛠️' },
-                { label: 'Donateurs', value: stats.donors?.total || 0, color: '#00BCD4', icon: '👥' },
-                { label: 'Dons Zakat', value: stats.zakat?.total || 25, color: '#FFC107', icon: '💰' }
+                { label: 'Équipements', value: stats.equipment?.total || 0, color: '#9C27B0', icon: '🛠️' }
               ].map((item, index) => (
                 <Box key={index} sx={{ 
                   display: 'flex', 
