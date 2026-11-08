@@ -93,7 +93,7 @@ const getSignedUrl = async (path, expiresIn = 3600) => {
   try {
     const { data, error } = await supabase.storage
       .from(supabaseBucket)
-      .createSignedUrl(path, { expiresIn });
+      .createSignedUrl(path, expiresIn);
 
     if (error) {
       throw new Error(`Erreur URL signée: ${error.message}`);
